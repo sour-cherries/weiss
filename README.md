@@ -1,4 +1,8 @@
-# Nu primesc notă pentru că nu am pus titlu și descriere
+# weiss - a cli search engine
+
+un motor de cautare scris in C++ care indexeaza fisiere text/JSON in memorie si ofera suport pentru cautari booleene (AND/OR), cu functii de autocomplete in timp real, toleranta de typo-uri si ordonarea a rezultatelor dupa relevanta 
+
+
 
 ### Folosiți template-ul corespunzător grupei voastre!
 
