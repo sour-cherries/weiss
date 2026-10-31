@@ -4,19 +4,32 @@
 
 #include "doc.h"
 
-Document::Document(int id, std::string title, std::string fPath, std::string content)
-    : id(id), title(std::move(title)), fPath(std::move(fPath)), content(std::move(content)) {
+Document::Document(int id, const std::string& title, const std::string& fPath, const std::string& content)
+    : id(id), title(title), fPath(fPath), content(content) {
 }
 
-Document::Document(const Document& other) = default;
-Document& Document::operator=(const Document& other) = default;
-Document::~Document() = default;
+Document::Document(const Document& other)
+    : id(other.id), title(other.title), fPath(other.fPath), content(other.content) {
+}
 
-int Document::getId() const{
+Document& Document::operator=(const Document& other) {
+    if (this != &other) {
+        id = other.id;
+        title = other.title;
+        fPath = other.fPath;
+        content = other.content;
+    }
+    return *this;
+}
+
+Document::~Document() {
+}
+
+int Document::getId() const {
     return id;
 }
 
-const std::string& Document::getTitle() const{
+const std::string& Document::getTitle() const {
     return title;
 }
 

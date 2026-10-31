@@ -16,18 +16,18 @@ private:
     std::string content;
 
 public:
-    Document(int id, std::string title,  std::string fPath, std::string content);
+    Document(int id, const std::string& title, const std::string& fPath, const std::string& content);
 
     Document(const Document& other);
     Document& operator=(const Document& other);
     ~Document();
 
-    [[nodiscard]] int getId() const;
-    [[nodiscard]] const std::string& getTitle() const;
-    [[nodiscard]] const std::string& getfPath() const;
-    [[nodiscard]] const std::string& getContent() const;
+     int getId() const;
+     const std::string& getTitle() const;
+     const std::string& getfPath() const;
+     const std::string& getContent() const;
 
-    [[nodiscard]] std::size_t getLen() const;
+     std::size_t getLen() const;
 
     friend std::ostream& operator<<(std::ostream& os, const Document& doc);
 };
