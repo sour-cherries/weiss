@@ -134,41 +134,44 @@ std::string InvIndex::locateTerm(int docID, const std::string& term) const {
         return "";
     }
 
-    std::string info = "aparitii: " + std::to_string(targetEntry->getFreq()) + " | locatii: ";
     const auto& positions = targetEntry->getPos();
-
-    for (std::size_t i = 0; i < positions.size(); ++i) {
-        int pos = positions[i];
-        int proc = (pos * 100) / totalWords;
-        std::string zona = "mijloc";
-        if (proc < 33) {
-            zona = "inceput";
-        } else if (proc > 66) {
-            zona = "final";
-        }
-
-        info += "cuvantul #" + std::to_string(pos + 1) + "/" + std::to_string(totalWords)
-              + " (" + std::to_string(proc) + "% - " + zona + ")";
-        if (i + 1 < positions.size()) {
-            info += ", ";
-        }
+    int firstPos = positions.front();
+    int proc = (firstPos * 100) / totalWords;
+    std::string zona = "mijloc";
+    if (proc < 33) {
+        zona = "inceput";
+    } else if (proc > 66) {
+        zona = "final";
     }
 
-    int firstPos = positions.front();
+    std::string posStr = "[";
+    std::size_t limit = std::min<std::size_t>(positions.size(), 4);
+    for (std::size_t i = 0; i < limit; ++i) {
+        posStr += "#" + std::to_string(positions[i] + 1);
+        if (i + 1 < limit) {
+            posStr += ", ";
+        }
+    }
+    if (positions.size() > limit) {
+        posStr += ", +" + std::to_string(positions.size() - limit) + " altele";
+    }
+    posStr += "]";
+
     int start = std::max(0, firstPos - 3);
     int end = std::min(totalWords - 1, firstPos + 3);
 
-    info += " | context: \"...";
+    std::string snippet = "\"...";
     for (int i = start; i <= end; ++i) {
         if (i == firstPos) {
-            info += " [" + docTokens[static_cast<std::size_t>(i)].first + "]";
+            snippet += " [" + docTokens[static_cast<std::size_t>(i)].first + "]";
         } else {
-            info += " " + docTokens[static_cast<std::size_t>(i)].first;
+            snippet += " " + docTokens[static_cast<std::size_t>(i)].first;
         }
     }
-    info += " ...\"";
+    snippet += " ...\"";
 
-    return info;
+    return std::to_string(targetEntry->getFreq()) + " aparitii | pozitii: "
+           + posStr + " (~" + std::to_string(proc) + "% " + zona + ") | context: " + snippet;
 }
 
 std::string InvIndex::bestTypoMatch(const std::string& typo, int maxDist) const {
@@ -240,6 +243,42 @@ std::vector<int> InvIndex::smartSearch(const std::string& query, std::string& us
     }
 
     return {};
+}
+
+std::vector<int> InvIndex::searchAND(const std::vector<std::string>& terms) const {
+    if (terms.empty()) {
+        return {};
+    }
+
+    std::vector<int> result = searchExact(terms[0]);
+    for (std::size_t i = 1; i < terms.size(); ++i) {
+        if (result.empty()) {
+            break;
+        }
+        std::vector<int> current = searchExact(terms[i]);
+        std::vector<int> intersection;
+        for (int id : result) {
+            if (std::find(current.begin(), current.end(), id) != current.end()) {
+                intersection.push_back(id);
+            }
+        }
+        result = intersection;
+    }
+    return result;
+}
+
+std::vector<int> InvIndex::searchOR(const std::vector<std::string>& terms) const {
+    std::vector<int> result;
+    for (const auto& term : terms) {
+        std::vector<int> docs = searchExact(term);
+        for (int id : docs) {
+            if (std::find(result.begin(), result.end(), id) == result.end()) {
+                result.push_back(id);
+            }
+        }
+    }
+    std::sort(result.begin(), result.end());
+    return result;
 }
 
 std::size_t InvIndex::getDocCount() const {

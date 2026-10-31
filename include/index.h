@@ -13,6 +13,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <utility>
 
 class InvIndex {
 private:
@@ -28,13 +29,16 @@ public:
     void addDoc(const Document& doc);
 
     std::vector<int> searchExact(const std::string& term) const;
-
     std::vector<std::string> fuzzySugg(const std::string& typo, int maxDist) const;
 
     std::string locateTerm(int docID, const std::string& term) const;
     std::string bestTypoMatch(const std::string& typo, int maxDist) const;
     std::vector<std::string> autocomplete(const std::string& prefix) const;
     std::vector<int> smartSearch(const std::string& query, std::string& usedTerm) const;
+
+    std::vector<int> searchAND(const std::vector<std::string>& terms) const;
+    std::vector<int> searchOR(const std::vector<std::string>& terms) const;
+
 
     std::size_t getDocCount() const;
     const std::vector<Document>& getDocuments() const;
