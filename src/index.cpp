@@ -1,7 +1,3 @@
-//
-// Created by patri on 29.10.2026.
-//
-
 #include "index.h"
 #include <algorithm>
 
@@ -96,6 +92,154 @@ std::vector<std::string> InvIndex::fuzzySugg(const std::string& typo, int maxDis
         }
     }
     return suggestions;
+}
+
+std::string InvIndex::locateTerm(int docID, const std::string& term) const {
+    auto searchTokens = tokenizer.tokenize(term);
+    if (searchTokens.empty()) {
+        return "";
+    }
+    std::string cleanTerm = searchTokens.front().first;
+
+    auto it = dictionary.find(cleanTerm);
+    if (it == dictionary.end()) {
+        return "";
+    }
+
+    const Entry* targetEntry = nullptr;
+    for (const auto& entry : it->second) {
+        if (entry.getDocID() == docID) {
+            targetEntry = &entry;
+            break;
+        }
+    }
+    if (!targetEntry) {
+        return "";
+    }
+
+    const Document* targetDoc = nullptr;
+    for (const auto& doc : documents) {
+        if (doc.getId() == docID) {
+            targetDoc = &doc;
+            break;
+        }
+    }
+    if (!targetDoc) {
+        return "";
+    }
+
+    auto docTokens = tokenizer.tokenize(targetDoc->getContent());
+    int totalWords = static_cast<int>(docTokens.size());
+    if (totalWords == 0) {
+        return "";
+    }
+
+    std::string info = "aparitii: " + std::to_string(targetEntry->getFreq()) + " | locatii: ";
+    const auto& positions = targetEntry->getPos();
+
+    for (std::size_t i = 0; i < positions.size(); ++i) {
+        int pos = positions[i];
+        int proc = (pos * 100) / totalWords;
+        std::string zona = "mijloc";
+        if (proc < 33) {
+            zona = "inceput";
+        } else if (proc > 66) {
+            zona = "final";
+        }
+
+        info += "cuvantul #" + std::to_string(pos + 1) + "/" + std::to_string(totalWords)
+              + " (" + std::to_string(proc) + "% - " + zona + ")";
+        if (i + 1 < positions.size()) {
+            info += ", ";
+        }
+    }
+
+    int firstPos = positions.front();
+    int start = std::max(0, firstPos - 3);
+    int end = std::min(totalWords - 1, firstPos + 3);
+
+    info += " | context: \"...";
+    for (int i = start; i <= end; ++i) {
+        if (i == firstPos) {
+            info += " [" + docTokens[static_cast<std::size_t>(i)].first + "]";
+        } else {
+            info += " " + docTokens[static_cast<std::size_t>(i)].first;
+        }
+    }
+    info += " ...\"";
+
+    return info;
+}
+
+std::string InvIndex::bestTypoMatch(const std::string& typo, int maxDist) const {
+    auto tokens = tokenizer.tokenize(typo);
+    if (tokens.empty()) {
+        return "";
+    }
+    std::string cleanTerm = tokens.front().first;
+
+    std::string bestWord;
+    int bestDist = maxDist + 1;
+    int bestTotalFreq = -1;
+
+    for (const auto& item : dictionary) {
+        const std::string& word = item.first;
+        int dist = leveninDist(cleanTerm, word);
+
+        if (dist <= maxDist) {
+            int totalFreq = 0;
+            for (const auto& entry : item.second) {
+                totalFreq += entry.getFreq();
+            }
+
+            if (dist < bestDist || (dist == bestDist && totalFreq > bestTotalFreq)) {
+                bestDist = dist;
+                bestTotalFreq = totalFreq;
+                bestWord = word;
+            }
+        }
+    }
+    return bestWord;
+}
+
+std::vector<std::string> InvIndex::autocomplete(const std::string& prefix) const {
+    std::vector<std::string> matches;
+    auto tokens = tokenizer.tokenize(prefix);
+    if (tokens.empty()) {
+        return matches;
+    }
+    std::string cleanPref = tokens.front().first;
+
+    for (const auto& item : dictionary) {
+        const std::string& word = item.first;
+        if (word.size() >= cleanPref.size() && word.compare(0, cleanPref.size(), cleanPref) == 0) {
+            matches.push_back(word);
+        }
+    }
+    std::sort(matches.begin(), matches.end());
+    return matches;
+}
+
+std::vector<int> InvIndex::smartSearch(const std::string& query, std::string& usedTerm) const {
+    auto tokens = tokenizer.tokenize(query);
+    if (tokens.empty()) {
+        usedTerm = "";
+        return {};
+    }
+    usedTerm = tokens.front().first;
+
+    std::vector<int> exact = searchExact(usedTerm);
+    if (!exact.empty()) {
+        return exact;
+    }
+
+    std::string corrected = bestTypoMatch(usedTerm, 2);
+    if (!corrected.empty()) {
+        usedTerm = corrected;
+        return searchExact(corrected);
+    }
+
+    return {};
 }
 
 std::size_t InvIndex::getDocCount() const {

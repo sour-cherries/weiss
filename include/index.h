@@ -31,6 +31,11 @@ public:
 
     std::vector<std::string> fuzzySugg(const std::string& typo, int maxDist) const;
 
+    std::string locateTerm(int docID, const std::string& term) const;
+    std::string bestTypoMatch(const std::string& typo, int maxDist) const;
+    std::vector<std::string> autocomplete(const std::string& prefix) const;
+    std::vector<int> smartSearch(const std::string& query, std::string& usedTerm) const;
+
     std::size_t getDocCount() const;
     const std::vector<Document>& getDocuments() const;
 
