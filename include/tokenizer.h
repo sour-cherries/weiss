@@ -15,16 +15,16 @@ private:
     std::string delimiter;
     bool convTOlow;
 
-    [[nodiscard]] bool isDelimiter(char c) const;
-    [[nodiscard]] std::string cleanTok(const std::string& raw) const;
+    bool isDelimiter(char c) const;
+    std::string cleanTok(const std::string& raw) const;
 
 public:
-    Tokenizer(std::string delimiter, bool convTOlow);
+    Tokenizer(const std::string& delimiter, bool convTOlow);
 
-    [[nodiscard]] std::vector<std::pair<std::string, int>> tokenize(const std::string& text) const;
+    std::vector<std::pair<std::string, int>> tokenize(const std::string& text) const;
 
-    [[nodiscard]] const std::string& getDelimiter() const;
-    [[nodiscard]] bool isLowenable() const;
+    const std::string& getDelimiter() const;
+    bool isLowenable() const;
 
     friend std::ostream& operator<<(std::ostream& os, const Tokenizer& tok);
 };

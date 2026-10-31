@@ -3,11 +3,11 @@
 //
 
 #include "index.h"
-#include <utility>
 #include <algorithm>
 
-InvIndex::InvIndex(Tokenizer tok):
-    tokenizer(std::move(tok)) { }
+InvIndex::InvIndex(const Tokenizer& tok)
+    : tokenizer(tok) {
+}
 
 void InvIndex::addDoc(const Document& doc) {
     documents.push_back(doc);
@@ -57,7 +57,7 @@ int InvIndex::leveninDist(const std::string& s1, const std::string& s2) {
     const std::size_t m = s1.size();
     const std::size_t n = s2.size();
 
-    std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n+1,0));
+    std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1, 0));
 
     for (std::size_t i = 0; i <= m; ++i) {
         dp[i][0] = static_cast<int>(i);
@@ -66,12 +66,13 @@ int InvIndex::leveninDist(const std::string& s1, const std::string& s2) {
     for (std::size_t j = 1; j <= n; ++j) {
         dp[0][j] = static_cast<int>(j);
     }
+
     for (std::size_t i = 1; i <= m; ++i) {
         for (std::size_t j = 1; j <= n; ++j) {
-            if (s1[i-1] == s2[j-1]) {
-                dp[i][j] = dp[i-1][j-1];
+            if (s1[i - 1] == s2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1];
             } else {
-              dp[i][j] = 1 + std::min({dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]});
+                dp[i][j] = 1 + std::min({dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]});
             }
         }
     }
@@ -105,18 +106,18 @@ const std::vector<Document>& InvIndex::getDocuments() const {
     return documents;
 }
 
-std::ostream& operator<< (std::ostream& os, const InvIndex& idx) {
+std::ostream& operator<<(std::ostream& os, const InvIndex& idx) {
     os << "=== Inv Index (Total documente: " << idx.documents.size() << ", Term unici: " << idx.dictionary.size() << ") ===\n";
 
     os << "~~ Documente inregistrate ~~\n";
     for (const auto& doc : idx.documents) {
-        os << " "  << doc << std::endl;
+        os << " " << doc << std::endl;
     }
 
-    os << "~~ Index Term ~~" << std::endl;
+    os << "~~ Index Term ~~\n";
     for (const auto& item : idx.dictionary) {
         os << " Term: '" << item.first << "' -> ";
-        for (const auto& entry: item.second) {
+        for (const auto& entry : item.second) {
             os << entry << " ";
         }
         os << std::endl;

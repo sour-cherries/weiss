@@ -17,11 +17,11 @@ private:
 public:
     Entry(int docID, int firstPos);
 
-    void addPos(int pos);
+    void addPos(int newPos);
 
-    [[nodiscard]] int getDocID() const;
-    [[nodiscard]] int getFreq() const;
-    [[nodiscard]] const std::vector<int>& getPos() const;
+    int getDocID() const;
+    int getFreq() const;
+    const std::vector<int>& getPos() const;
 
     friend std::ostream& operator<<(std::ostream& os, const Entry& entry);
 };

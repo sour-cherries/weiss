@@ -3,11 +3,11 @@
 //
 
 #include "tokenizer.h"
-#include <utility>
 #include <cctype>
 
-Tokenizer::Tokenizer(std::string delimiter, bool convTOlow):
-     delimiter(std::move(delimiter)), convTOlow(convTOlow) {}
+Tokenizer::Tokenizer(const std::string& delimiter, bool convTOlow)
+    : delimiter(delimiter), convTOlow(convTOlow) {
+}
 
 bool Tokenizer::isDelimiter(char c) const {
      return delimiter.find(c) != std::string::npos;
@@ -19,7 +19,7 @@ std::string Tokenizer::cleanTok(const std::string& raw) const {
      }
 
      std::string result = raw;
-     for (char&ch : result) {
+     for (char& ch : result) {
           ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
      }
 
@@ -31,15 +31,14 @@ std::vector<std::pair<std::string, int>> Tokenizer::tokenize(const std::string& 
      std::string current;
      int wordPos = 0;
 
-     for (char ch: text) {
+     for (char ch : text) {
           if (isDelimiter(ch)) {
                if (!current.empty()) {
                     tokens.emplace_back(cleanTok(current), wordPos);
                     current.clear();
                     wordPos++;
                }
-          }
-          else {
+          } else {
                current.push_back(ch);
           }
      }
@@ -60,6 +59,6 @@ bool Tokenizer::isLowenable() const {
 }
 
 std::ostream& operator<<(std::ostream& os, const Tokenizer& tok) {
-     os << "Tokenizer [delimiter: \"" << tok.delimiter << "\" ~ lowercase" << (tok.convTOlow ? "true" : "false") << "]";
+     os << "Tokenizer [delimiter: \"" << tok.delimiter << "\" ~ lowercase: " << (tok.convTOlow ? "true" : "false") << "]";
      return os;
 }

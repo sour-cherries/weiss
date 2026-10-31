@@ -4,11 +4,12 @@
 
 #include "entry.h"
 
-Entry::Entry(int docID, int firstPos):
-    docID(docID), freq(1), pos{firstPos} {}
+Entry::Entry(int docID, int firstPos)
+    : docID(docID), freq(1), pos{firstPos} {
+}
 
-void Entry::addPos(int newPOS) {
-    pos.push_back(newPOS);
+void Entry::addPos(int newPos) {
+    pos.push_back(newPos);
     freq++;
 }
 
