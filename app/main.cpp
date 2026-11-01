@@ -49,6 +49,10 @@ int main() {
         std::cout << dAtribuire.getId() << " " << dAtribuire.getTitle() << " "
                   << dAtribuire.getfPath() << " " << dAtribuire.getContent().size()
                   << " " << dAtribuire.getLen() << "\n";
+
+        std::cout << "linii: " << dAtribuire.countLines() << " cuvinte: " << dAtribuire.countWords()
+                  << " ext: " << dAtribuire.getExtension() << " has 'the': " << dAtribuire.hasSubstring("the")
+                  << " (" << dAtribuire.countSubstrings("the") << ") preview: " << dAtribuire.getPreview(30) << "\n";
     }
 
     Entry e(1, 0);

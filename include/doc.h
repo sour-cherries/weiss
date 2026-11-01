@@ -28,6 +28,14 @@ public:
      const std::string& getContent() const;
 
      std::size_t getLen() const;
+     int countLines() const;
+     int countWords() const;
+     bool hasSubstring(const std::string& sub) const;
+     int countSubstrings(const std::string& sub) const;
+
+     std::string getExtension() const;
+     std::string getPreview(std::size_t maxChars) const;
+
 
     friend std::ostream& operator<<(std::ostream& os, const Document& doc);
 };
