@@ -22,6 +22,7 @@ private:
     std::unordered_map<std::string, std::vector<Entry>> dictionary;
 
     static int leveninDist(const std::string& s1, const std::string& s2);
+    const Document* findDocById(int docID) const;
 
 public:
     explicit InvIndex(const Tokenizer& tok);
@@ -38,16 +39,23 @@ public:
 
     std::vector<int> searchAND(const std::vector<std::string>& terms) const;
     std::vector<int> searchOR(const std::vector<std::string>& terms) const;
+    std::vector<int> searchNOT(const std::string& includeTerm, const std::string& excludeTerm) const;
     std::vector<int> searchQuery(const std::string& expr, std::vector<std::string>& termsUsed) const;
 
-    std::vector<int> searchNOT(const std::string& includeTerm, const std::string& excludeTerm) const;
+    std::vector<int> searchPhrase(const std::string& firstWord, const std::string& secondWord) const;
     std::vector<int> searchProximity(const std::string& w1, const std::string& w2, int maxDist) const;
+    std::vector<std::pair<int, double>> searchRanked(const std::string& term) const;
+
     int getTermTotalFreq(const std::string& term) const;
+    int getTermDocFreq(const std::string& term) const;
     std::string getMostFrequentTerm() const;
     int getDocUniqueTerms(int docID) const;
-    std::size_t getVocabularySize() const;
+    int getDocTotalWords(int docID) const;
+    std::vector<std::string> getTopTermsInDoc(int docID, std::size_t topN) const;
+    std::string getIndexSummary() const;
 
     std::size_t getDocCount() const;
+    std::size_t getVocabularySize() const;
     const std::vector<Document>& getDocuments() const;
 
     friend std::ostream& operator<<(std::ostream& os, const InvIndex& idx);

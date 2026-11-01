@@ -121,12 +121,19 @@ int main() {
     std::cout << "cautare OR demo: " << gasiteOr.size() << " documente\n\n";
 
     auto gasiteNot = idx.searchNOT("security", "blockchain");
-    auto gasiteProx = idx.searchProximity("security", "protocol", 5);
-    std::cout << "not: " << gasiteNot.size() << " prox: " << gasiteProx.size()
-              << " freq: " << idx.getTermTotalFreq("security")
-              << " top: " << idx.getMostFrequentTerm()
-              << " doc1_unic: " << idx.getDocUniqueTerms(1)
-              << " vocab: " << idx.getVocabularySize() << "\n";
+    auto fraza = idx.searchPhrase("client", "hello");
+    auto prox = idx.searchProximity("security", "protocol", 5);
+    auto clasament = idx.searchRanked("security");
+
+    std::cout << idx.getIndexSummary() << " | vocab: " << idx.getVocabularySize() << "\n";
+    std::cout << "not: " << gasiteNot.size() << " | phrase: " << fraza.size()
+              << " | prox: " << prox.size() << " | ranked: " << clasament.size() << "\n";
+    std::cout << "freq: " << idx.getTermTotalFreq("security")
+              << " | docFreq: " << idx.getTermDocFreq("security")
+              << " | topTerm: " << idx.getMostFrequentTerm()
+              << " | doc1 unic: " << idx.getDocUniqueTerms(1)
+              << " | doc1 total: " << idx.getDocTotalWords(1)
+              << " | doc1 top3: " << idx.getTopTermsInDoc(1, 3).size() << "\n\n";
 
     std::string input;
     std::cout << "ce cauti in fisiere: ";

@@ -86,5 +86,16 @@ int main() {
     assert(resQuery.size() == 1);
     assert(resQuery[0] == 1);
 
+
+    assert(d1.countWords() >= 2);
+    assert(d1.getExtension() == "txt");
+    assert(e.hasPos(0));
+    assert(e.getSpan() == 7);
+    assert(tok.countTokens("a b c") == 3);
+    assert(tok.isStopWord("the"));
+    assert(idx.searchNOT("c++", "algoritm").size() == 1);
+    assert(!idx.searchRanked("c++").empty());
+    assert(idx.getVocabularySize() > 0);
+
     return 0;
 }

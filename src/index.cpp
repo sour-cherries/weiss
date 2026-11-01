@@ -1,8 +1,21 @@
 #include "index.h"
 #include <algorithm>
 
+#include "index.h"
+#include <algorithm>
+#include <cmath>
+
 InvIndex::InvIndex(const Tokenizer& tok)
     : tokenizer(tok) {
+}
+
+const Document* InvIndex::findDocById(int docID) const {
+    for (const auto& doc : documents) {
+        if (doc.getId() == docID) {
+            return &doc;
+        }
+    }
+    return nullptr;
 }
 
 void InvIndex::addDoc(const Document& doc) {
@@ -117,13 +130,7 @@ std::string InvIndex::locateTerm(int docID, const std::string& term) const {
         return "";
     }
 
-    const Document* targetDoc = nullptr;
-    for (const auto& doc : documents) {
-        if (doc.getId() == docID) {
-            targetDoc = &doc;
-            break;
-        }
-    }
+    const Document* targetDoc = findDocById(docID);
     if (!targetDoc) {
         return "";
     }
@@ -281,6 +288,19 @@ std::vector<int> InvIndex::searchOR(const std::vector<std::string>& terms) const
     return result;
 }
 
+std::vector<int> InvIndex::searchNOT(const std::string& includeTerm, const std::string& excludeTerm) const {
+    std::vector<int> incDocs = searchExact(includeTerm);
+    std::vector<int> excDocs = searchExact(excludeTerm);
+    std::vector<int> result;
+
+    for (int id : incDocs) {
+        if (std::find(excDocs.begin(), excDocs.end(), id) == excDocs.end()) {
+            result.push_back(id);
+        }
+    }
+    return result;
+}
+
 std::vector<int> InvIndex::searchQuery(const std::string& expr, std::vector<std::string>& termsUsed) const {
     auto tokens = tokenizer.tokenize(expr);
     std::vector<int> result;
@@ -319,21 +339,13 @@ std::vector<int> InvIndex::searchQuery(const std::string& expr, std::vector<std:
             }
         }
     }
+
     std::sort(result.begin(), result.end());
     return result;
 }
 
-std::vector<int> InvIndex::searchNOT(const std::string& includeTerm, const std::string& excludeTerm) const {
-    std::vector<int> incDocs = searchExact(includeTerm);
-    std::vector<int> excDocs = searchExact(excludeTerm);
-    std::vector<int> result;
-
-    for (int id : incDocs) {
-        if (std::find(excDocs.begin(), excDocs.end(), id) == excDocs.end()) {
-            result.push_back(id);
-        }
-    }
-    return result;
+std::vector<int> InvIndex::searchPhrase(const std::string& firstWord, const std::string& secondWord) const {
+    return searchProximity(firstWord, secondWord, 1);
 }
 
 std::vector<int> InvIndex::searchProximity(const std::string& w1, const std::string& w2, int maxDist) const {
@@ -352,12 +364,47 @@ std::vector<int> InvIndex::searchProximity(const std::string& w1, const std::str
 
     for (const auto& e1 : it1->second) {
         for (const auto& e2 : it2->second) {
-            if (e1.getDocID() == e2.getDocID() && e1.isFollowedBy(e2, maxDist)) {
-                result.push_back(e1.getDocID());
+            if (e1.getDocID() == e2.getDocID()) {
+                if (e1.isFollowedBy(e2, maxDist)) {
+                    result.push_back(e1.getDocID());
+                }
             }
         }
     }
     return result;
+}
+
+std::vector<std::pair<int, double>> InvIndex::searchRanked(const std::string& term) const {
+    std::vector<std::pair<int, double>> ranked;
+    auto tokens = tokenizer.tokenize(term);
+    if (tokens.empty() || documents.empty()) {
+        return ranked;
+    }
+
+    const std::string& cleanTerm = tokens.front().first;
+    auto it = dictionary.find(cleanTerm);
+    if (it == dictionary.end()) {
+        return ranked;
+    }
+
+    double docsWithTerm = static_cast<double>(it->second.size());
+    double totalDocs = static_cast<double>(documents.size());
+    double idf = std::log(1.0 + (totalDocs / docsWithTerm));
+
+    for (const auto& entry : it->second) {
+        int docID = entry.getDocID();
+        int totalWords = getDocTotalWords(docID);
+        if (totalWords > 0) {
+            double tf = entry.getRelativeDensity(totalWords);
+            ranked.emplace_back(docID, tf * idf);
+        }
+    }
+
+    std::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
+        return a.second > b.second;
+    });
+
+    return ranked;
 }
 
 int InvIndex::getTermTotalFreq(const std::string& term) const {
@@ -376,20 +423,33 @@ int InvIndex::getTermTotalFreq(const std::string& term) const {
     return total;
 }
 
+int InvIndex::getTermDocFreq(const std::string& term) const {
+    auto tokens = tokenizer.tokenize(term);
+    if (tokens.empty()) {
+        return 0;
+    }
+    auto it = dictionary.find(tokens.front().first);
+    if (it == dictionary.end()) {
+        return 0;
+    }
+    return static_cast<int>(it->second.size());
+}
+
 std::string InvIndex::getMostFrequentTerm() const {
-    std::string best;
-    int maxF = -1;
+    std::string bestTerm;
+    int maxFreq = -1;
+
     for (const auto& item : dictionary) {
         int sum = 0;
         for (const auto& entry : item.second) {
             sum += entry.getFreq();
         }
-        if (sum > maxF) {
-            maxF = sum;
-            best = item.first;
+        if (sum > maxFreq) {
+            maxFreq = sum;
+            bestTerm = item.first;
         }
     }
-    return best;
+    return bestTerm;
 }
 
 int InvIndex::getDocUniqueTerms(int docID) const {
@@ -405,12 +465,52 @@ int InvIndex::getDocUniqueTerms(int docID) const {
     return count;
 }
 
-std::size_t InvIndex::getVocabularySize() const {
-    return dictionary.size();
+int InvIndex::getDocTotalWords(int docID) const {
+    const Document* doc = findDocById(docID);
+    if (!doc) {
+        return 0;
+    }
+    return tokenizer.countTokens(doc->getContent());
+}
+
+std::vector<std::string> InvIndex::getTopTermsInDoc(int docID, std::size_t topN) const {
+    std::vector<std::pair<std::string, int>> freqs;
+    for (const auto& item : dictionary) {
+        for (const auto& entry : item.second) {
+            if (entry.getDocID() == docID) {
+                freqs.emplace_back(item.first, entry.getFreq());
+                break;
+            }
+        }
+    }
+
+    std::sort(freqs.begin(), freqs.end(), [](const auto& a, const auto& b) {
+        if (a.second != b.second) {
+            return a.second > b.second;
+        }
+        return a.first < b.first;
+    });
+
+    std::vector<std::string> res;
+    std::size_t limit = std::min(topN, freqs.size());
+    for (std::size_t i = 0; i < limit; ++i) {
+        res.push_back(freqs[i].first);
+    }
+    return res;
+}
+
+std::string InvIndex::getIndexSummary() const {
+    return "Docs: " + std::to_string(documents.size())
+           + " | Vocab: " + std::to_string(dictionary.size())
+           + " | Top: " + getMostFrequentTerm();
 }
 
 std::size_t InvIndex::getDocCount() const {
     return documents.size();
+}
+
+std::size_t InvIndex::getVocabularySize() const {
+    return dictionary.size();
 }
 
 const std::vector<Document>& InvIndex::getDocuments() const {
