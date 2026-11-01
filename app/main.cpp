@@ -57,6 +57,10 @@ int main() {
 
     Entry e(1, 0);
     e.addPos(4);
+    Entry e2(1, 5);
+    std::cout << e.hasPos(4) << " " << e.getFirstPos() << " " << e.getLastPos() << " "
+              << e.getSpan() << " " << e.countInRange(0, 5) << " "
+              << e.getMinDistTo(e2) << " " << e.isFollowedBy(e2, 2) << "\n";
     std::cout << e << "\n";
     std::cout << e.getDocID() << " " << e.getFreq() << " " << e.getPos().size() << "\n";
 

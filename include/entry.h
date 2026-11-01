@@ -23,6 +23,14 @@ public:
     int getFreq() const;
     const std::vector<int>& getPos() const;
 
+    bool hasPos(int targetPos) const;
+    int getFirstPos() const;
+    int getLastPos() const;
+    int getSpan() const;
+    int countInRange(int startPos, int endPos) const;
+    int getMinDistTo(const Entry& other) const;
+    bool isFollowedBy(const Entry& other, int maxOffset) const;
+
     friend std::ostream& operator<<(std::ostream& os, const Entry& entry);
 };
 
