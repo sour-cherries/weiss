@@ -50,9 +50,18 @@ int main() {
                   << dAtribuire.getfPath() << " " << dAtribuire.getContent().size()
                   << " " << dAtribuire.getLen() << "\n";
 
-        std::cout << "linii: " << dAtribuire.countLines() << " cuvinte: " << dAtribuire.countWords()
-                  << " ext: " << dAtribuire.getExtension() << " has 'the': " << dAtribuire.hasSubstring("the")
-                  << " (" << dAtribuire.countSubstrings("the") << ") preview: " << dAtribuire.getPreview(30) << "\n";
+        std::cout << "linii: " << dAtribuire.countLines()
+                  << " | cuvinte: " << dAtribuire.countWords()
+                  << " | prop: " << dAtribuire.countSentences()
+                  << " | paragrafe: " << dAtribuire.countParagraphs() << "\n";
+        std::cout << "ext: " << dAtribuire.getExtension()
+                  << " | folder: " << dAtribuire.getFolder()
+                  << " | timp: " << dAtribuire.getReadingTimeMinutes() << " min\n";
+        std::cout << "has 'the': " << dAtribuire.hasSubstring("the")
+                  << " (" << dAtribuire.countSubstring("the") << ")"
+                  << " | linii vec: " << dAtribuire.splitIntoLines().size()
+                  << " | linia 0: " << dAtribuire.getLineAt(0).substr(0, 15)
+                  << " | prev: " << dAtribuire.getPreview(25) << "\n";
     }
 
     Entry e(1, 0);
