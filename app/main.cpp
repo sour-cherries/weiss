@@ -67,6 +67,11 @@ int main() {
     std::cout << tok << "\n";
     std::cout << tok.getDelimiter() << " " << tok.isLowenable() << "\n";
 
+    std::string textProba = "the quick brown fox jumps over the lazy dog";
+    std::cout << tok.countTokens(textProba) << " " << tok.extractUniqueWords(textProba).size() << " "
+              << tok.filterByMinLength(textProba, 4).size() << " " << tok.isStopWord("the") << " "
+              << tok.removeStopWords(textProba).size() << " " << tok.findLongestToken(textProba) << "\n";
+
     std::cout << idx.getDocCount() << " fisiere indexate complet din assets/\n";
     for (const auto& doc : idx.getDocuments()) {
         std::cout << doc.getTitle() << " (" << doc.getLen() << " caractere)\n";
