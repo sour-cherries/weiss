@@ -82,6 +82,20 @@ int main() {
     std::cout << tok.getDelimiter() << " " << tok.isLowenable() << "\n";
 
     std::string textProba = "the quick brown fox jumps over the lazy dog";
+    auto faraStop = tok.removeStopWords(textProba);
+    std::cout << "toks: " << tok.countTokens(textProba)
+              << " | words: " << tok.extractWordsOnly(textProba).size()
+              << " | unic: " << tok.extractUniqueWords(textProba).size()
+              << " | min4: " << tok.filterByMinLength(textProba, 4).size() << "\n";
+    std::cout << "stop('the'): " << tok.isStopWord("the")
+              << " | noStop: " << faraStop.size()
+              << " | join: " << tok.joinTokens(faraStop, "-")
+              << " | norm: " << tok.normalizeWord(" Test! ")
+              << " | strip: " << tok.stripDelimiters(textProba)
+              << " | long: " << tok.findLongestToken(textProba)
+              << " | avg: " << tok.getAverageTokenLength(textProba) << "\n";
+
+
     std::cout << tok.countTokens(textProba) << " " << tok.extractUniqueWords(textProba).size() << " "
               << tok.filterByMinLength(textProba, 4).size() << " " << tok.isStopWord("the") << " "
               << tok.removeStopWords(textProba).size() << " " << tok.findLongestToken(textProba) << "\n";
