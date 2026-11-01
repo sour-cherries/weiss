@@ -281,6 +281,49 @@ std::vector<int> InvIndex::searchOR(const std::vector<std::string>& terms) const
     return result;
 }
 
+std::vector<int> InvIndex::searchQuery(const std::string& expr, std::vector<std::string>& termsUsed) const {
+    auto tokens = tokenizer.tokenize(expr);
+    std::vector<int> result;
+    std::string op = "or";
+    bool firstWord = true;
+
+    for (const auto& pair : tokens) {
+        std::string word = pair.first;
+        if (word == "and" || word == "or") {
+            op = word;
+            continue;
+        }
+
+        std::string used;
+        std::vector<int> currentDocs = smartSearch(word, used);
+        if (!used.empty()) {
+            termsUsed.push_back(used);
+        }
+
+        if (firstWord) {
+            result = currentDocs;
+            firstWord = false;
+        } else if (op == "and") {
+            std::vector<int> temp;
+            for (int id : result) {
+                if (std::find(currentDocs.begin(), currentDocs.end(), id) != currentDocs.end()) {
+                    temp.push_back(id);
+                }
+            }
+            result = temp;
+        } else {
+            for (int id : currentDocs) {
+                if (std::find(result.begin(), result.end(), id) == result.end()) {
+                    result.push_back(id);
+                }
+            }
+        }
+    }
+
+    std::sort(result.begin(), result.end());
+    return result;
+}
+
 std::size_t InvIndex::getDocCount() const {
     return documents.size();
 }

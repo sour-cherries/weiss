@@ -38,7 +38,7 @@ public:
 
     std::vector<int> searchAND(const std::vector<std::string>& terms) const;
     std::vector<int> searchOR(const std::vector<std::string>& terms) const;
-
+    std::vector<int> searchQuery(const std::string& expr, std::vector<std::string>& termsUsed) const;
 
     std::size_t getDocCount() const;
     const std::vector<Document>& getDocuments() const;

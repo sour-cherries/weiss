@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -64,28 +65,53 @@ int main() {
     }
     std::cout << "\n";
 
+    std::cout << idx << "\n";
+
+    auto exacte = idx.searchExact("security");
+    std::cout << "cautare exacta demo: " << exacte.size() << " documente\n";
+
+    auto sugestii = idx.fuzzySugg("secrity", 2);
+    std::cout << "fuzzy demo: " << sugestii.size() << " sugestii\n";
+
+    auto gasiteAnd = idx.searchAND({"security", "token"});
+    std::cout << "cautare AND demo: " << gasiteAnd.size() << " documente\n";
+
+    auto gasiteOr = idx.searchOR({"handshake", "certificate"});
+    std::cout << "cautare OR demo: " << gasiteOr.size() << " documente\n\n";
+
     std::string input;
     std::cout << "ce cauti in fisiere: ";
-    if (std::cin >> input) {
-        auto gasite = idx.searchExact(input);
-        std::cout << "termenul '" << input << "' a fost gasit in " << gasite.size() << " fisier(e):\n";
+    if (std::getline(std::cin, input)) {
+        if (!input.empty() && input.back() == '\r') {
+            input.pop_back();
+        }
 
+        std::vector<std::string> cuvinteFolosite;
+        auto gasite = idx.searchQuery(input, cuvinteFolosite);
+
+        std::cout << "rezultate pentru '" << input << "' (" << gasite.size() << " fisiere):\n";
         for (int id : gasite) {
             for (const auto& doc : idx.getDocuments()) {
                 if (doc.getId() == id) {
-                    std::cout << " -> fisier: " << doc.getTitle()
-                              << " | cale: " << doc.getfPath()
-                              << " | lungime: " << doc.getLen() << " caractere\n";
+                    std::cout << " -> [" << doc.getTitle() << "]\n";
+                    for (const auto& w : cuvinteFolosite) {
+                        std::string loc = idx.locateTerm(id, w);
+                        if (!loc.empty()) {
+                            std::cout << "    * " << w << ": " << loc << "\n";
+                        }
+                    }
                 }
             }
         }
 
-        if (gasite.empty()) {
-            std::cout << "nu exista rezultate exacte. caut sugestii apropiate...\n";
-            auto sugestii = idx.fuzzySugg(input, 2);
-            for (const auto& s : sugestii) {
-                std::cout << " -> ai vrut sa spui: " << s << "\n";
+        if (!cuvinteFolosite.empty()) {
+            std::string pref = cuvinteFolosite[0].size() >= 3 ? cuvinteFolosite[0].substr(0, 3) : cuvinteFolosite[0];
+            auto sug = idx.autocomplete(pref);
+            std::cout << "autocomplete '" << pref << "': ";
+            for (const auto& s : sug) {
+                std::cout << s << " ";
             }
+            std::cout << "\n";
         }
     }
 
