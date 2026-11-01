@@ -334,6 +334,7 @@ const std::vector<Document>& InvIndex::getDocuments() const {
 
 std::ostream& operator<<(std::ostream& os, const InvIndex& idx) {
     os << "=== Inv Index (Total documente: " << idx.documents.size() << ", Term unici: " << idx.dictionary.size() << ") ===\n";
+    os << "Tokenizer: " << idx.tokenizer << "\n";
 
     os << "~~ Documente inregistrate ~~\n";
     for (const auto& doc : idx.documents) {
