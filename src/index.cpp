@@ -389,7 +389,7 @@ std::vector<std::pair<int, double>> InvIndex::searchRanked(const std::string& te
 
     double docsWithTerm = static_cast<double>(it->second.size());
     double totalDocs = static_cast<double>(documents.size());
-    double idf = std::log(1.0 + (totalDocs / docsWithTerm));
+    double idf = std::log1p(totalDocs / docsWithTerm);
 
     for (const auto& entry : it->second) {
         int docID = entry.getDocID();
