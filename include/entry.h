@@ -39,6 +39,8 @@ public:
     std::vector<int> getPositionsInWindow(int centerPos, int radius) const;
     double getRelativeDensity(int totalDocWords) const;
 
+    std::string getProfile(const Entry& other, int totalDocWords) const;
+
     friend std::ostream& operator<<(std::ostream& os, const Entry& entry);
 };
 

@@ -53,6 +53,7 @@ public:
     int getDocTotalWords(int docID) const;
     std::vector<std::string> getTopTermsInDoc(int docID, std::size_t topN) const;
     std::string getIndexSummary() const;
+    std::string runDiagnostics() const;
 
     std::size_t getDocCount() const;
     std::size_t getVocabularySize() const;

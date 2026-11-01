@@ -43,6 +43,8 @@ public:
     std::vector<std::string> splitIntoLines() const;
     double getReadingTimeMinutes() const;
 
+    std::string getStats() const;
+
     friend std::ostream& operator<<(std::ostream& os, const Document& doc);
 };
 

@@ -38,6 +38,8 @@ public:
     std::string findLongestToken(const std::string& text) const;
     double getAverageTokenLength(const std::string& text) const;
 
+    std::string analyzeSample(const std::string& sample) const;
+
     friend std::ostream& operator<<(std::ostream& os, const Tokenizer& tok);
 };
 

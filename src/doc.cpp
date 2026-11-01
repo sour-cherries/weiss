@@ -204,6 +204,24 @@ double Document::getReadingTimeMinutes() const {
     return static_cast<double>(w) / 200.0;
 }
 
+std::string Document::getStats() const {
+    std::string info = "Doc #" + std::to_string(id) + " [" + title + "]\n";
+    info += " - cale: " + fPath + " (folder: " + getFolder() + ", ext: " + getExtension() + ")\n";
+    info += " - dimensiune: " + std::to_string(getLen()) + " bytes, "
+          + std::to_string(countLines()) + " linii, "
+          + std::to_string(countWords()) + " cuvinte\n";
+    info += " - structura: " + std::to_string(countSentences()) + " propozitii, "
+          + std::to_string(countParagraphs()) + " paragrafe, "
+          + std::to_string(splitIntoLines().size()) + " randuri active\n";
+    info += " - timp citire: " + std::to_string(getReadingTimeMinutes()) + " min\n";
+    if (hasSubstring("the")) {
+        info += " - aparitii 'the': " + std::to_string(countSubstring("the")) + "\n";
+    }
+    info += " - prima linie: " + getLineAt(0).substr(0, 20) + "\n";
+    info += " - preview: " + getPreview(30);
+    return info;
+}
+
 std::ostream& operator<<(std::ostream& os, const Document& doc) {
     os << "Document ID: " << doc.id << " ~ Titlu: " << doc.title
        << " (" << doc.content.size() << " bytes)";

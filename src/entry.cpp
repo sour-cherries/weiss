@@ -4,6 +4,7 @@
 
 #include "entry.h"
 #include <cstdlib>
+#include <string>
 
 Entry::Entry(int docID_, int firstPos)
     : docID(docID_), freq(1), pos{firstPos} {
@@ -176,6 +177,26 @@ double Entry::getRelativeDensity(int totalDocWords) const {
         return 0.0;
     }
     return static_cast<double>(freq) / static_cast<double>(totalDocWords);
+}
+
+std::string Entry::getProfile(const Entry& other, int totalDocWords) const {
+    std::string res = "Entry doc=" + std::to_string(getDocID())
+                    + " freq=" + std::to_string(getFreq())
+                    + " posCount=" + std::to_string(getPos().size()) + "\n";
+    res += " - bounds: first=" + std::to_string(getFirstPos())
+         + " last=" + std::to_string(getLastPos())
+         + " at(0)=" + std::to_string(getPosAt(0))
+         + " span=" + std::to_string(getSpan()) + "\n";
+    res += " - gaps: min=" + std::to_string(getMinGap())
+         + " max=" + std::to_string(getMaxGap())
+         + " avg=" + std::to_string(getAvgGap()) + "\n";
+    res += " - filtre: has(0)=" + std::to_string(hasPos(0))
+         + " range[0,10]=" + std::to_string(countInRange(0, 10))
+         + " win=" + std::to_string(getPositionsInWindow(2, 3).size())
+         + " dens=" + std::to_string(getRelativeDensity(totalDocWords)) + "\n";
+    res += " - relatie: minDist=" + std::to_string(getMinDistTo(other))
+         + " followed=" + std::to_string(isFollowedBy(other, 2));
+    return res;
 }
 
 std::ostream& operator<<(std::ostream& os, const Entry& entry) {

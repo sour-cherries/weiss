@@ -505,6 +505,36 @@ std::string InvIndex::getIndexSummary() const {
            + " | Top: " + getMostFrequentTerm();
 }
 
+std::string InvIndex::runDiagnostics() const {
+    auto ex = searchExact("security");
+    auto fz = fuzzySugg("secrity", 2);
+    auto sAnd = searchAND({"security", "token"});
+    auto sOr = searchOR({"handshake", "certificate"});
+    auto sNot = searchNOT("security", "blockchain");
+    auto phr = searchPhrase("client", "hello");
+    auto prx = searchProximity("security", "protocol", 5);
+    auto rnk = searchRanked("security");
+
+    std::string rep = getIndexSummary() + " | vocab=" + std::to_string(getVocabularySize()) + "\n";
+    rep += " - cautari: exact=" + std::to_string(ex.size())
+         + " fuzzy=" + std::to_string(fz.size())
+         + " and=" + std::to_string(sAnd.size())
+         + " or=" + std::to_string(sOr.size())
+         + " not=" + std::to_string(sNot.size()) + "\n";
+    rep += " - avansat: phrase=" + std::to_string(phr.size())
+         + " prox=" + std::to_string(prx.size())
+         + " ranked=" + std::to_string(rnk.size()) + "\n";
+    rep += " - term 'security': totalFreq=" + std::to_string(getTermTotalFreq("security"))
+         + " docFreq=" + std::to_string(getTermDocFreq("security")) + "\n";
+    if (!documents.empty()) {
+        int firstId = documents.front().getId();
+        rep += " - doc1: unic=" + std::to_string(getDocUniqueTerms(firstId))
+             + " total=" + std::to_string(getDocTotalWords(firstId))
+             + " top3=" + std::to_string(getTopTermsInDoc(firstId, 3).size());
+    }
+    return rep;
+}
+
 std::size_t InvIndex::getDocCount() const {
     return documents.size();
 }

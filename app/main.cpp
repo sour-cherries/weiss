@@ -42,98 +42,19 @@ int main() {
 
     if (idx.getDocCount() > 0) {
         Document dCopie = idx.getDocuments()[0];
-        Document dAtribuire(99, "temp", "temp.txt", "text");
+        Document dAtribuire(99, "temp.txt", "assets/temp.txt", "text");
         dAtribuire = dCopie;
-
-        std::cout << dCopie << "\n";
-        std::cout << dAtribuire.getId() << " " << dAtribuire.getTitle() << " "
-                  << dAtribuire.getfPath() << " " << dAtribuire.getContent().size()
-                  << " " << dAtribuire.getLen() << "\n";
-
-        std::cout << "linii: " << dAtribuire.countLines()
-                  << " | cuvinte: " << dAtribuire.countWords()
-                  << " | prop: " << dAtribuire.countSentences()
-                  << " | paragrafe: " << dAtribuire.countParagraphs() << "\n";
-        std::cout << "ext: " << dAtribuire.getExtension()
-                  << " | folder: " << dAtribuire.getFolder()
-                  << " | timp: " << dAtribuire.getReadingTimeMinutes() << " min\n";
-        std::cout << "has 'the': " << dAtribuire.hasSubstring("the")
-                  << " (" << dAtribuire.countSubstring("the") << ")"
-                  << " | linii vec: " << dAtribuire.splitIntoLines().size()
-                  << " | linia 0: " << dAtribuire.getLineAt(0).substr(0, 15)
-                  << " | prev: " << dAtribuire.getPreview(25) << "\n";
+        std::cout << dCopie << "\n" << dAtribuire.getStats() << "\n\n";
     }
 
-    Entry e(1, 0);
-    e.addPos(4);
-    e.addPos(9);
-    Entry e2(1, 5);
-    std::cout << e << " " << e2 << "\n";
-    std::cout << e.getDocID() << " " << e.getFreq() << " " << e.getPos().size() << "\n";
-    std::cout << "pos: " << e.hasPos(4) << " " << e.getFirstPos() << " " << e.getLastPos()
-              << " " << e.getPosAt(1) << " span: " << e.getSpan() << "\n";
-    std::cout << "gaps: " << e.getMinGap() << " " << e.getMaxGap() << " " << e.getAvgGap()
-              << " range: " << e.countInRange(0, 6) << " dist: " << e.getMinDistTo(e2)
-              << " follow: " << e.isFollowedBy(e2, 2)
-              << " win: " << e.getPositionsInWindow(4, 2).size()
-              << " dens: " << e.getRelativeDensity(100) << "\n";
+    Entry e1(1, 0);
+    e1.addPos(4);
+    Entry e2(1, 1);
+    std::cout << e1 << "\n" << e1.getProfile(e2, 50) << "\n\n";
 
-    std::cout << tok << "\n";
-    std::cout << tok.getDelimiter() << " " << tok.isLowenable() << "\n";
+    std::cout << tok << "\n" << tok.analyzeSample("the quick brown fox") << "\n\n";
 
-    std::string textProba = "the quick brown fox jumps over the lazy dog";
-    auto faraStop = tok.removeStopWords(textProba);
-    std::cout << "toks: " << tok.countTokens(textProba)
-              << " | words: " << tok.extractWordsOnly(textProba).size()
-              << " | unic: " << tok.extractUniqueWords(textProba).size()
-              << " | min4: " << tok.filterByMinLength(textProba, 4).size() << "\n";
-    std::cout << "stop('the'): " << tok.isStopWord("the")
-              << " | noStop: " << faraStop.size()
-              << " | join: " << tok.joinTokens(faraStop, "-")
-              << " | norm: " << tok.normalizeWord(" Test! ")
-              << " | strip: " << tok.stripDelimiters(textProba)
-              << " | long: " << tok.findLongestToken(textProba)
-              << " | avg: " << tok.getAverageTokenLength(textProba) << "\n";
-
-
-    std::cout << tok.countTokens(textProba) << " " << tok.extractUniqueWords(textProba).size() << " "
-              << tok.filterByMinLength(textProba, 4).size() << " " << tok.isStopWord("the") << " "
-              << tok.removeStopWords(textProba).size() << " " << tok.findLongestToken(textProba) << "\n";
-
-    std::cout << idx.getDocCount() << " fisiere indexate complet din assets/\n";
-    for (const auto& doc : idx.getDocuments()) {
-        std::cout << doc.getTitle() << " (" << doc.getLen() << " caractere)\n";
-    }
-    std::cout << "\n";
-
-    std::cout << idx << "\n";
-
-    auto exacte = idx.searchExact("security");
-    std::cout << "cautare exacta demo: " << exacte.size() << " documente\n";
-
-    auto sugestii = idx.fuzzySugg("secrity", 2);
-    std::cout << "fuzzy demo: " << sugestii.size() << " sugestii\n";
-
-    auto gasiteAnd = idx.searchAND({"security", "token"});
-    std::cout << "cautare AND demo: " << gasiteAnd.size() << " documente\n";
-
-    auto gasiteOr = idx.searchOR({"handshake", "certificate"});
-    std::cout << "cautare OR demo: " << gasiteOr.size() << " documente\n\n";
-
-    auto gasiteNot = idx.searchNOT("security", "blockchain");
-    auto fraza = idx.searchPhrase("client", "hello");
-    auto prox = idx.searchProximity("security", "protocol", 5);
-    auto clasament = idx.searchRanked("security");
-
-    std::cout << idx.getIndexSummary() << " | vocab: " << idx.getVocabularySize() << "\n";
-    std::cout << "not: " << gasiteNot.size() << " | phrase: " << fraza.size()
-              << " | prox: " << prox.size() << " | ranked: " << clasament.size() << "\n";
-    std::cout << "freq: " << idx.getTermTotalFreq("security")
-              << " | docFreq: " << idx.getTermDocFreq("security")
-              << " | topTerm: " << idx.getMostFrequentTerm()
-              << " | doc1 unic: " << idx.getDocUniqueTerms(1)
-              << " | doc1 total: " << idx.getDocTotalWords(1)
-              << " | doc1 top3: " << idx.getTopTermsInDoc(1, 3).size() << "\n\n";
+    std::cout << idx << "\n" << idx.runDiagnostics() << "\n\n";
 
     std::string input;
     std::cout << "ce cauti in fisiere: ";
@@ -149,7 +70,7 @@ int main() {
         for (int id : gasite) {
             for (const auto& doc : idx.getDocuments()) {
                 if (doc.getId() == id) {
-                    std::cout << " -> [" << doc.getTitle() << "]\n";
+                    std::cout << " -> [" << doc.getTitle() << "] (" << doc.getfPath() << ")\n";
                     for (const auto& w : cuvinteFolosite) {
                         std::string loc = idx.locateTerm(id, w);
                         if (!loc.empty()) {

@@ -184,6 +184,24 @@ double Tokenizer::getAverageTokenLength(const std::string& text) const {
     return static_cast<double>(sum) / static_cast<double>(all.size());
 }
 
+std::string Tokenizer::analyzeSample(const std::string& sample) const {
+    auto faraStop = removeStopWords(sample);
+    std::string out = "Tokenizer [low=" + std::to_string(isLowenable())
+                    + ", delimLen=" + std::to_string(getDelimiter().size()) + "]\n";
+    out += " - total=" + std::to_string(countTokens(sample))
+         + " words=" + std::to_string(extractWordsOnly(sample).size())
+         + " unique=" + std::to_string(extractUniqueWords(sample).size())
+         + " min4=" + std::to_string(filterByMinLength(sample, 4).size()) + "\n";
+    out += " - stop('the')=" + std::to_string(isStopWord("the"))
+         + " noStop=" + std::to_string(faraStop.size())
+         + " joined=" + joinTokens(faraStop, "-") + "\n";
+    out += " - norm=" + normalizeWord(" Test! ")
+         + " strip=" + stripDelimiters(sample)
+         + " long=" + findLongestToken(sample)
+         + " avg=" + std::to_string(getAverageTokenLength(sample));
+    return out;
+}
+
 std::ostream& operator<<(std::ostream& os, const Tokenizer& tok) {
     os << "Tokenizer [delimiter: \"" << tok.delimiter << "\" ~ lowercase"
        << (tok.convTOlow ? "true" : "false") << "]";
