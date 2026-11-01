@@ -39,7 +39,7 @@ std::vector<int> InvIndex::searchExact(const std::string& term) const {
         return result;
     }
 
-    std::string cleanTerm = tokens.front().first;
+    const std::string& cleanTerm = tokens.front().first;
     auto it = dictionary.find(cleanTerm);
     if (it != dictionary.end()) {
         for (const auto& entry : it->second) {
@@ -83,7 +83,7 @@ std::vector<std::string> InvIndex::fuzzySugg(const std::string& typo, int maxDis
         return suggestions;
     }
 
-    std::string cleanTerm = tokens.front().first;
+    const std::string& cleanTerm = tokens.front().first;
 
     for (const auto& item : dictionary) {
         const std::string& indexWord = item.first;
@@ -99,7 +99,7 @@ std::string InvIndex::locateTerm(int docID, const std::string& term) const {
     if (searchTokens.empty()) {
         return "";
     }
-    std::string cleanTerm = searchTokens.front().first;
+    const std::string& cleanTerm = searchTokens.front().first;
 
     auto it = dictionary.find(cleanTerm);
     if (it == dictionary.end()) {
@@ -179,7 +179,7 @@ std::string InvIndex::bestTypoMatch(const std::string& typo, int maxDist) const 
     if (tokens.empty()) {
         return "";
     }
-    std::string cleanTerm = tokens.front().first;
+    const std::string& cleanTerm = tokens.front().first;
 
     std::string bestWord;
     int bestDist = maxDist + 1;
@@ -211,7 +211,7 @@ std::vector<std::string> InvIndex::autocomplete(const std::string& prefix) const
     if (tokens.empty()) {
         return matches;
     }
-    std::string cleanPref = tokens.front().first;
+    const std::string& cleanPref = tokens.front().first;
 
     for (const auto& item : dictionary) {
         const std::string& word = item.first;
@@ -288,7 +288,7 @@ std::vector<int> InvIndex::searchQuery(const std::string& expr, std::vector<std:
     bool firstWord = true;
 
     for (const auto& pair : tokens) {
-        std::string word = pair.first;
+        const std::string& word = pair.first;
         if (word == "and" || word == "or") {
             op = word;
             continue;
