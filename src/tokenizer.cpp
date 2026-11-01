@@ -150,7 +150,7 @@ std::string Tokenizer::stripDelimiters(const std::string& text) const {
     return res;
 }
 
-std::string Tokenizer::joinTokens(const std::vector<std::string>& words, const std::string& sep) const {
+std::string Tokenizer::joinTokens(const std::vector<std::string>& words, const std::string& sep) {
     std::string res;
     for (std::size_t i = 0; i < words.size(); ++i) {
         res += words[i];

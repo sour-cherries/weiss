@@ -27,7 +27,7 @@ Document& Document::operator=(const Document& other) {
 Document::~Document() {
 }
 
-bool Document::isSpace(char c) const {
+bool Document::isSpace(char c){
     if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
         return true;
     }
@@ -75,9 +75,7 @@ int Document::countWords() const {
     bool inWord = false;
     for (char c : content) {
         if (isSpace(c)) {
-            if (inWord) {
                 inWord = false;
-            }
         } else {
             if (!inWord) {
                 inWord = true;

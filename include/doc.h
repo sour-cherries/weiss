@@ -16,7 +16,7 @@ private:
     std::string fPath;
     std::string content;
 
-    bool isSpace(char c) const;
+    static bool isSpace(char c);
 
 public:
     Document(int id, const std::string& title, const std::string& fPath, const std::string& content);

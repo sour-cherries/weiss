@@ -34,7 +34,7 @@ public:
     std::vector<std::string> removeStopWords(const std::string& text) const;
     std::string normalizeWord(const std::string& word) const;
     std::string stripDelimiters(const std::string& text) const;
-    std::string joinTokens(const std::vector<std::string>& words, const std::string& sep) const;
+    static std::string joinTokens(const std::vector<std::string>& words, const std::string& sep);
     std::string findLongestToken(const std::string& text) const;
     double getAverageTokenLength(const std::string& text) const;
 
