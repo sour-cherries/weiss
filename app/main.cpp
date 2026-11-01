@@ -92,6 +92,14 @@ int main() {
     auto gasiteOr = idx.searchOR({"handshake", "certificate"});
     std::cout << "cautare OR demo: " << gasiteOr.size() << " documente\n\n";
 
+    auto gasiteNot = idx.searchNOT("security", "blockchain");
+    auto gasiteProx = idx.searchProximity("security", "protocol", 5);
+    std::cout << "not: " << gasiteNot.size() << " prox: " << gasiteProx.size()
+              << " freq: " << idx.getTermTotalFreq("security")
+              << " top: " << idx.getMostFrequentTerm()
+              << " doc1_unic: " << idx.getDocUniqueTerms(1)
+              << " vocab: " << idx.getVocabularySize() << "\n";
+
     std::string input;
     std::cout << "ce cauti in fisiere: ";
     if (std::getline(std::cin, input)) {

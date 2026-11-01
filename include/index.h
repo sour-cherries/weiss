@@ -40,6 +40,13 @@ public:
     std::vector<int> searchOR(const std::vector<std::string>& terms) const;
     std::vector<int> searchQuery(const std::string& expr, std::vector<std::string>& termsUsed) const;
 
+    std::vector<int> searchNOT(const std::string& includeTerm, const std::string& excludeTerm) const;
+    std::vector<int> searchProximity(const std::string& w1, const std::string& w2, int maxDist) const;
+    int getTermTotalFreq(const std::string& term) const;
+    std::string getMostFrequentTerm() const;
+    int getDocUniqueTerms(int docID) const;
+    std::size_t getVocabularySize() const;
+
     std::size_t getDocCount() const;
     const std::vector<Document>& getDocuments() const;
 

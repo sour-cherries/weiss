@@ -319,9 +319,94 @@ std::vector<int> InvIndex::searchQuery(const std::string& expr, std::vector<std:
             }
         }
     }
-
     std::sort(result.begin(), result.end());
     return result;
+}
+
+std::vector<int> InvIndex::searchNOT(const std::string& includeTerm, const std::string& excludeTerm) const {
+    std::vector<int> incDocs = searchExact(includeTerm);
+    std::vector<int> excDocs = searchExact(excludeTerm);
+    std::vector<int> result;
+
+    for (int id : incDocs) {
+        if (std::find(excDocs.begin(), excDocs.end(), id) == excDocs.end()) {
+            result.push_back(id);
+        }
+    }
+    return result;
+}
+
+std::vector<int> InvIndex::searchProximity(const std::string& w1, const std::string& w2, int maxDist) const {
+    std::vector<int> result;
+    auto t1 = tokenizer.tokenize(w1);
+    auto t2 = tokenizer.tokenize(w2);
+    if (t1.empty() || t2.empty() || maxDist <= 0) {
+        return result;
+    }
+
+    auto it1 = dictionary.find(t1.front().first);
+    auto it2 = dictionary.find(t2.front().first);
+    if (it1 == dictionary.end() || it2 == dictionary.end()) {
+        return result;
+    }
+
+    for (const auto& e1 : it1->second) {
+        for (const auto& e2 : it2->second) {
+            if (e1.getDocID() == e2.getDocID() && e1.isFollowedBy(e2, maxDist)) {
+                result.push_back(e1.getDocID());
+            }
+        }
+    }
+    return result;
+}
+
+int InvIndex::getTermTotalFreq(const std::string& term) const {
+    auto tokens = tokenizer.tokenize(term);
+    if (tokens.empty()) {
+        return 0;
+    }
+    auto it = dictionary.find(tokens.front().first);
+    if (it == dictionary.end()) {
+        return 0;
+    }
+    int total = 0;
+    for (const auto& entry : it->second) {
+        total += entry.getFreq();
+    }
+    return total;
+}
+
+std::string InvIndex::getMostFrequentTerm() const {
+    std::string best;
+    int maxF = -1;
+    for (const auto& item : dictionary) {
+        int sum = 0;
+        for (const auto& entry : item.second) {
+            sum += entry.getFreq();
+        }
+        if (sum > maxF) {
+            maxF = sum;
+            best = item.first;
+        }
+    }
+    return best;
+}
+
+int InvIndex::getDocUniqueTerms(int docID) const {
+    int count = 0;
+    for (const auto& item : dictionary) {
+        for (const auto& entry : item.second) {
+            if (entry.getDocID() == docID) {
+                count++;
+                break;
+            }
+        }
+    }
+    return count;
+}
+
+std::size_t InvIndex::getVocabularySize() const {
+    return dictionary.size();
 }
 
 std::size_t InvIndex::getDocCount() const {
