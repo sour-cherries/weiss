@@ -26,8 +26,8 @@ int main() {
     Tokenizer tok(" \n\t.,;:!?-()[]{}\"'/\\", true);
     InvIndex idx(tok);
 
-    int idCounter = 1;
     if (fs::exists("assets") && fs::is_directory("assets")) {
+        int idCounter = 1;
         for (const auto& entry : fs::directory_iterator("assets")) {
             if (entry.is_regular_file()) {
                 std::string pathStr = entry.path().string();
