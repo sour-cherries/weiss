@@ -38,7 +38,6 @@ std::vector<std::string> imparteCuvinte(const std::string& line) {
     return cuvinte;
 }
 
-
 bool citesteLinie(const std::string& prompt, std::string& line) {
     std::cout << prompt << std::flush;
     if (!std::getline(std::cin, line)) {
@@ -341,11 +340,9 @@ void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Toke
             s.raza = static_cast<std::size_t>(valoare);
         } else if (arg[1] == "pozitii") {
             s.maxPozitii = static_cast<std::size_t>(valoare);
-        }
-        else if (arg[1] == "culori") {
+        } else if (arg[1] == "culori") {
             s.culori = (valoare != 0);
-        }
-        else {
+        } else {
             throw std::invalid_argument("Setare necunoscuta: " + arg[1]);
         }
         std::cout << "ok: typo=" << s.maxTypo << " raza=" << s.raza << " pozitii=" << s.maxPozitii << "\n";
@@ -368,7 +365,6 @@ std::vector<std::string> detecteazaStopWords(const std::vector<std::string>& cai
                 total++;
             }
         } catch (const std::runtime_error&) {
-
         }
     }
 
@@ -398,6 +394,7 @@ int main(int argc, char* argv[]) {
         std::string folder;
         if (argc > 1) {
             folder = argv[1];
+            argv[1] = nullptr;
         } else if (!citesteLinie("folder cu documente: ", folder)) {
             return EXIT_FAILURE;
         }
@@ -414,6 +411,7 @@ int main(int argc, char* argv[]) {
         std::vector<std::string> stopWords;
         if (argc > 2) {
             stopWords = citesteStopWordsDinFisier(argv[2]);
+            argv[2] = nullptr;
         } else {
             stopWords = detecteazaStopWords(cai, delimitatori, setari.pragStopWords);
         }
