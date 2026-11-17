@@ -312,7 +312,7 @@ void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok) {
               << " | BM25 A: " << a.getBM25(idf, total, avgLen) << "\n";
 }
 
-void proceseazaComanda(const std::string& linie, InvIndex& idx, const Tokenizer& tok, Setari& s) {
+void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Tokenizer& tok, Setari& s) {
     std::vector<std::string> arg = imparteCuvinte(linie);
     const std::string& cmd = arg.front();
 

@@ -4,8 +4,6 @@
 
 #include "doc.h"
 
-#include "doc.h"
-
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -75,7 +73,7 @@ Document Document::fromFile(int id, const std::string& path) {
     }
     std::size_t dot = title.find_last_of('.');
     if (dot != std::string::npos) {
-        title = title.substr(0, dot);
+        title = title.substr(dot);
     }
 
     return Document(id, title, path, buffer.str());
