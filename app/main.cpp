@@ -3,94 +3,462 @@
 #include "tokenizer.h"
 #include "index.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
+#include <exception>
+#include <filesystem>
 #include <iostream>
-#include <fstream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <filesystem>
+#include <fstream>
+#include <map>
 
 namespace fs = std::filesystem;
 
-std::string citesteFisier(const std::string& cale) {
-    std::ifstream f(cale);
-    if (!f.is_open()) {
-        return "";
+struct Setari {
+    int maxTypo = 2;
+    std::size_t raza = 30;
+    std::size_t maxPozitii = 5;
+    double pragStopWords = 0.01;
+    bool culori = true;
+};
+
+std::vector<std::string> imparteCuvinte(const std::string& line) {
+    std::vector<std::string> cuvinte;
+    std::istringstream iss(line);
+    std::string cuvant;
+    while (iss >> cuvant) {
+        cuvinte.push_back(cuvant);
     }
-    std::stringstream buf;
-    buf << f.rdbuf();
-    return buf.str();
+    return cuvinte;
 }
 
-int main() {
-    Tokenizer tok(" \n\t.,;:!?-()[]{}\"'/\\", true);
-    InvIndex idx(tok);
 
-    if (fs::exists("assets") && fs::is_directory("assets")) {
-        int idCounter = 1;
-        for (const auto& entry : fs::directory_iterator("assets")) {
-            if (entry.is_regular_file()) {
-                std::string pathStr = entry.path().string();
-                std::string content = citesteFisier(pathStr);
-                if (!content.empty()) {
-                    Document d(idCounter++, entry.path().filename().string(), pathStr, content);
-                    idx.addDoc(d);
-                }
+bool citesteLinie(const std::string& prompt, std::string& line) {
+    std::cout << prompt << std::flush;
+    if (!std::getline(std::cin, line)) {
+        return false;
+    }
+    if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+    }
+    return true;
+}
+
+std::string construiesteDelimitatori() {
+    std::string delim;
+    for (int c = 1; c < 128; ++c) {
+        if (std::ispunct(c) != 0) {
+            delim.push_back(static_cast<char>(c));
+        }
+    }
+    return delim;
+}
+
+std::vector<int> pozitiiTermen(const Tokenizer& tok, const std::string& text, const std::string& termen) {
+    std::vector<int> pozitii;
+    std::string curat = tok.normalizeWord(termen);
+    for (const auto& p : tok.tokenize(text)) {
+        if (p.first == curat) {
+            pozitii.push_back(p.second);
+        }
+    }
+    return pozitii;
+}
+
+Entry construiesteEntry(int docID, const std::vector<int>& pozitii) {
+    if (pozitii.empty()) {
+        throw std::invalid_argument("Un Entry are nevoie de cel putin o pozitie");
+    }
+    Entry entry(docID, pozitii.front());
+    for (int p : pozitii) {
+        entry.addPos(p);
+    }
+    return entry;
+}
+
+void afiseazaIds(const InvIndex& idx, const std::string& eticheta, const std::vector<int>& ids) {
+    std::cout << eticheta << " (" << ids.size() << "):";
+    for (int id : ids) {
+        for (const auto& doc : idx.getDocuments()) {
+            if (doc.getId() == id) {
+                std::cout << " [" << doc.getTitle() << "]";
             }
         }
     }
+    std::cout << "\n";
+}
 
-    if (idx.getDocCount() > 0) {
-        Document dCopie = idx.getDocuments()[0];
-        Document dAtribuire(99, "temp.txt", "assets/temp.txt", "text");
-        dAtribuire = dCopie;
-        std::cout << dCopie << "\n" << dAtribuire.getStats() << "\n\n";
+void afiseazaCuvinte(const std::string& eticheta, const std::vector<std::string>& cuvinte) {
+    std::cout << eticheta << " (" << cuvinte.size() << "): " << Tokenizer::joinTokens(cuvinte, ", ") << "\n";
+}
+
+void afiseazaAjutor() {
+    std::cout << "\nScrie orice cuvant sau mai multe pentru a cauta (greselile se corecteaza automat).\n"
+              << "Poti folosi and / or / not:  algorithm and data   |   data not java\n\n"
+              << "Comenzi:\n"
+              << "  :help                  acest mesaj\n"
+              << "  :stats                 statistici despre index si documente\n"
+              << "  :complete <prefix>     autocomplete\n"
+              << "  :phrase <w1> <w2>      cauta fraza (w1 urmat direct de w2)\n"
+              << "  :near <w1> <w2> <n>    w1 si w2 la cel mult n cuvinte distanta\n"
+              << "  :set typo|raza|pozitii <valoare>   schimba setarile\n"
+              << "  :index                 afiseaza tot indexul\n"
+              << "  :demo                  demonstratie pentru Document / Entry / Tokenizer\n"
+              << "  :quit                  iesire\n\n";
+}
+
+struct Aparitie {
+    int linie;
+    int coloana;
+    int cuvant;
+    std::size_t start;
+    std::size_t sfarsit;
+    std::size_t inceputLinie;
+    std::size_t sfarsitLinie;
+};
+
+std::vector<Aparitie> gasesteAparitii(const Tokenizer& tok, const std::string& text,
+                                      const std::string& delimitatori, const std::string& termen) {
+    std::vector<Aparitie> rezultat;
+    const std::string curat = tok.normalizeWord(termen);
+    if (curat.empty()) {
+        return rezultat;
     }
 
-    Entry e1(1, 0);
-    e1.addPos(4);
-    Entry e2(1, 1);
-    std::cout << e1 << "\n" << e1.getProfile(e2, 50) << "\n\n";
+    int linie = 1;
+    int indexCuvant = 0;
+    std::size_t inceputLinie = 0;
+    std::size_t startCuvant = 0;
+    bool inCuvant = false;
 
-    std::cout << tok << "\n" << tok.analyzeSample("the quick brown fox") << "\n\n";
+    for (std::size_t i = 0; i <= text.size(); ++i) {
+        bool separator = (i == text.size())
+                         || std::isspace(static_cast<unsigned char>(text[i])) != 0
+                         || delimitatori.find(text[i]) != std::string::npos;
 
-    std::cout << idx << "\n" << idx.runDiagnostics() << "\n\n";
-
-    std::string input;
-    std::cout << "ce cauti in fisiere: ";
-    if (std::getline(std::cin, input)) {
-        if (!input.empty() && input.back() == '\r') {
-            input.pop_back();
+        if (!separator && !inCuvant) {
+            inCuvant = true;
+            startCuvant = i;
+        } else if (separator && inCuvant) {
+            inCuvant = false;
+            if (tok.normalizeWord(text.substr(startCuvant, i - startCuvant)) == curat) {
+                std::size_t sfarsitLinie = text.find('\n', startCuvant);
+                if (sfarsitLinie == std::string::npos) {
+                    sfarsitLinie = text.size();
+                }
+                rezultat.push_back({linie, static_cast<int>(startCuvant - inceputLinie) + 1, indexCuvant,
+                                    startCuvant, i, inceputLinie, sfarsitLinie});
+            }
+            indexCuvant++;
         }
 
-        std::vector<std::string> cuvinteFolosite;
-        auto gasite = idx.searchQuery(input, cuvinteFolosite);
+        if (i < text.size() && text[i] == '\n') {
+            linie++;
+            inceputLinie = i + 1;
+        }
+    }
+    return rezultat;
+}
 
-        std::cout << "rezultate pentru '" << input << "' (" << gasite.size() << " fisiere):\n";
-        for (int id : gasite) {
-            for (const auto& doc : idx.getDocuments()) {
-                if (doc.getId() == id) {
-                    std::cout << " -> [" << doc.getTitle() << "] (" << doc.getfPath() << ")\n";
-                    for (const auto& w : cuvinteFolosite) {
-                        std::string loc = idx.locateTerm(id, w);
-                        if (!loc.empty()) {
-                            std::cout << "    * " << w << ": " << loc << "\n";
-                        }
-                    }
-                }
+std::string construiesteBara(const std::vector<Aparitie>& aparitii, int totalCuvinte, std::size_t latime) {
+    std::string bara(latime, '-');
+    if (totalCuvinte <= 0) {
+        return "[" + bara + "]";
+    }
+    for (const auto& a : aparitii) {
+        std::size_t loc = static_cast<std::size_t>(a.cuvant) * latime / static_cast<std::size_t>(totalCuvinte);
+        bara[std::min(loc, latime - 1)] = '#';
+    }
+    return "[" + bara + "]";
+}
+
+std::string construiesteContext(const std::string& text, const Aparitie& a, std::size_t raza, bool culori) {
+    std::size_t start = (a.start > a.inceputLinie + raza) ? a.start - raza : a.inceputLinie;
+    std::size_t end = std::min(a.sfarsitLinie, a.sfarsit + raza);
+
+    std::string inainte = text.substr(start, a.start - start);
+    std::string cuvant = text.substr(a.start, a.sfarsit - a.start);
+    std::string dupa = text.substr(a.sfarsit, end - a.sfarsit);
+    if (!dupa.empty() && dupa.back() == '\r') {
+        dupa.pop_back();
+    }
+
+    std::string rezultat = (start > a.inceputLinie) ? "..." : "";
+    rezultat += inainte;
+    rezultat += culori ? "\033[1;33m" + cuvant + "\033[0m" : "[" + cuvant + "]";
+    rezultat += dupa;
+    if (end < a.sfarsitLinie) {
+        rezultat += "...";
+    }
+    return rezultat;
+}
+
+void afiseazaRezultat(const InvIndex& idx, const Tokenizer& tok, const std::string& delimitatori,
+                      int docID, double scor, const std::vector<std::string>& termeni, const Setari& s) {
+    for (const auto& doc : idx.getDocuments()) {
+        if (doc.getId() != docID) {
+            continue;
+        }
+        const int total = idx.getDocTotalWords(docID);
+        std::cout << "[" << doc.getTitle() << "]  " << doc.getPath()
+                  << "  (scor " << scor << ", " << total << " cuvinte)\n";
+
+        for (const auto& termen : termeni) {
+            std::vector<Aparitie> aparitii = gasesteAparitii(tok, doc.getContent(), delimitatori, termen);
+            if (aparitii.empty()) {
+                continue;
+            }
+            std::cout << "  " << termen << " - " << aparitii.size() << " aparitii\n";
+            std::cout << "    " << construiesteBara(aparitii, total, 40) << "\n";
+
+            std::size_t limita = std::min(aparitii.size(), s.maxPozitii);
+            for (std::size_t i = 0; i < limita; ++i) {
+                const Aparitie& a = aparitii[i];
+                std::cout << "    linia " << a.linie << ", col " << a.coloana
+                          << ", cuvantul " << a.cuvant + 1 << ":  "
+                          << construiesteContext(doc.getContent(), a, s.raza, s.culori) << "\n";
+            }
+            if (aparitii.size() > limita) {
+                std::cout << "    ... +" << aparitii.size() - limita << " altele (:set pozitii <n>)\n";
             }
         }
+        std::cout << "\n";
+    }
+}
 
-        if (!cuvinteFolosite.empty()) {
-            std::string pref = cuvinteFolosite[0].size() >= 3 ? cuvinteFolosite[0].substr(0, 3) : cuvinteFolosite[0];
-            auto sug = idx.autocomplete(pref);
-            std::cout << "autocomplete '" << pref << "': ";
-            for (const auto& s : sug) {
-                std::cout << s << " ";
+void cautaSiAfiseaza(const InvIndex& idx, const Tokenizer& tok, const std::string& delimitatori,
+                     const std::string& interogare, const Setari& s) {
+    std::vector<std::string> folosite;
+    std::vector<int> gasite = idx.searchQuery(interogare, s.maxTypo, folosite);
+
+    if (folosite.empty()) {
+        std::cout << "Niciun termen valid in interogare (poate sunt doar stop words).\n";
+        return;
+    }
+    std::cout << "Termeni cautati: " << Tokenizer::joinTokens(folosite, ", ") << "\n";
+
+    if (gasite.empty()) {
+        std::cout << "Niciun rezultat.\n";
+        std::vector<std::string> sugestii = idx.autocomplete(folosite.front());
+        if (!sugestii.empty()) {
+            afiseazaCuvinte("Poate vrei", sugestii);
+        }
+        return;
+    }
+
+    std::vector<std::pair<int, double>> ranking = idx.searchRanked(Tokenizer::joinTokens(folosite, " "));
+    std::cout << gasite.size() << " fisiere gasite:\n\n";
+    for (const auto& scor : ranking) {
+        if (std::find(gasite.begin(), gasite.end(), scor.first) != gasite.end()) {
+            afiseazaRezultat(idx, tok, delimitatori, scor.first, scor.second, folosite, s);
+        }
+    }
+}
+
+void afiseazaStatistici(const InvIndex& idx) {
+    std::cout << idx.getIndexSummary() << "\n";
+    for (const auto& doc : idx.getDocuments()) {
+        std::cout << "doc " << doc.getId() << " [" << doc.getTitle() << "]: "
+                  << idx.getDocUniqueTerms(doc.getId()) << " termeni unici, "
+                  << idx.getDocTotalWords(doc.getId()) << " cuvinte, top: "
+                  << Tokenizer::joinTokens(idx.getTopTermsInDoc(doc.getId(), 5), ", ") << "\n";
+    }
+}
+
+void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok) {
+    const Document& primul = idx.getDocuments().front();
+    Document copie(primul);
+    Document atribuit = idx.getDocuments().back();
+    atribuit = copie;
+    std::cout << "~~ Document ~~\n" << copie << "\n" << atribuit << "\n";
+    std::cout << "calea: " << copie.getPath() << " | id: " << copie.getId()
+              << " | titlu: " << copie.getTitle() << " | lungime: " << copie.getContent().size() << "\n";
+
+    std::vector<std::string> top = idx.getTopTermsInDoc(primul.getId(), 2);
+    if (top.empty()) {
+        std::cout << "Documentul nu are termeni indexati.\n";
+        return;
+    }
+    const std::string& t1 = top.front();
+    const std::string& t2 = top.back();
+    std::cout << "'" << t1 << "': " << copie.countOccurrences(t1) << " aparitii, linia "
+              << copie.getLineOf(t1) << ", snippet: " << copie.getSnippet(t1, 30) << "\n\n";
+
+    std::cout << "~~ Tokenizer ~~\n" << tok << "\n"
+              << tok.analyzeSample(copie.getContent().substr(0, 100), " ") << "\n"
+              << "'" << t1 << "' stop word? " << tok.isStopWord(t1) << "\n\n";
+
+    Entry a = construiesteEntry(primul.getId(), pozitiiTermen(tok, primul.getContent(), t1));
+    Entry b = construiesteEntry(primul.getId(), pozitiiTermen(tok, primul.getContent(), t2));
+    int total = idx.getDocTotalWords(primul.getId());
+    double avgLen = static_cast<double>(total);
+    double idf = std::log1p(static_cast<double>(idx.getDocCount()) / std::max(1, idx.getTermDocFreq(t1)));
+
+    std::cout << "~~ Entry ('" << t1 << "' si '" << t2 << "') ~~\n" << a << "\n" << b << "\n";
+    std::cout << "docID=" << a.getDocID() << " freq=" << a.getFreq() << " prima poz=" << a.getFirstPos()
+              << " nr pozitii=" << a.getPos().size() << "\n";
+    std::cout << "A are pozitia primei pozitii din B? " << a.hasPos(b.getFirstPos()) << "\n";
+    std::cout << "inceputuri de fraza A->B: " << a.getPhraseStarts(b, 1).size() << "\n";
+    std::cout << "A urmat de B in 5 cuvinte? " << a.isFollowedBy(b, 5) << "\n";
+    std::cout << "distanta minima A-B: " << a.getMinDistTo(b) << "\n";
+    std::cout << "cea mai densa fereastra (10) A incepe la: " << a.getBestWindowStart(10) << "\n";
+    std::cout << "densitate relativa A: " << a.getRelativeDensity(total)
+              << " | BM25 A: " << a.getBM25(idf, total, avgLen) << "\n";
+}
+
+void proceseazaComanda(const std::string& linie, InvIndex& idx, const Tokenizer& tok, Setari& s) {
+    std::vector<std::string> arg = imparteCuvinte(linie);
+    const std::string& cmd = arg.front();
+
+    if (cmd == ":help") {
+        afiseazaAjutor();
+    } else if (cmd == ":stats") {
+        afiseazaStatistici(idx);
+    } else if (cmd == ":index") {
+        std::cout << idx << "\n";
+    } else if (cmd == ":demo") {
+        ruleazaDemo(idx, tok);
+    } else if (cmd == ":complete" && arg.size() >= 2) {
+        afiseazaCuvinte("autocomplete '" + arg[1] + "'", idx.autocomplete(arg[1]));
+    } else if (cmd == ":phrase" && arg.size() >= 3) {
+        afiseazaIds(idx, "fraza '" + arg[1] + " " + arg[2] + "'", idx.searchPhrase(arg[1], arg[2], 1));
+    } else if (cmd == ":near" && arg.size() >= 4) {
+        afiseazaIds(idx, "proximitate", idx.searchProximity(arg[1], arg[2], std::stoi(arg[3])));
+    } else if (cmd == ":set" && arg.size() >= 3) {
+        int valoare = std::stoi(arg[2]);
+        if (valoare < 0) {
+            throw std::invalid_argument("Valoarea nu poate fi negativa");
+        }
+        if (arg[1] == "typo") {
+            s.maxTypo = valoare;
+        } else if (arg[1] == "raza") {
+            s.raza = static_cast<std::size_t>(valoare);
+        } else if (arg[1] == "pozitii") {
+            s.maxPozitii = static_cast<std::size_t>(valoare);
+        }
+        else if (arg[1] == "culori") {
+            s.culori = (valoare != 0);
+        }
+        else {
+            throw std::invalid_argument("Setare necunoscuta: " + arg[1]);
+        }
+        std::cout << "ok: typo=" << s.maxTypo << " raza=" << s.raza << " pozitii=" << s.maxPozitii << "\n";
+    } else {
+        std::cout << "Comanda necunoscuta sau argumente lipsa. Scrie :help\n";
+    }
+}
+
+std::vector<std::string> detecteazaStopWords(const std::vector<std::string>& cai,
+                                             const std::string& delimitatori, double prag) {
+    Tokenizer faraStop(delimitatori, true, {});
+    std::map<std::string, int> frecvente;
+    int total = 0;
+
+    for (const auto& cale : cai) {
+        try {
+            Document doc = Document::fromFile(0, cale);
+            for (const auto& p : faraStop.tokenize(doc.getContent())) {
+                frecvente[p.first]++;
+                total++;
+            }
+        } catch (const std::runtime_error&) {
+
+        }
+    }
+
+    std::vector<std::string> rezultat;
+    for (const auto& item : frecvente) {
+        if (total > 0 && static_cast<double>(item.second) / total >= prag) {
+            rezultat.push_back(item.first);
+        }
+    }
+    return rezultat;
+}
+
+std::vector<std::string> citesteStopWordsDinFisier(const std::string& cale) {
+    std::ifstream fisier(cale);
+    if (!fisier.is_open()) {
+        throw std::runtime_error("Nu pot deschide fisierul cu stop words: " + cale);
+    }
+    std::stringstream buffer;
+    buffer << fisier.rdbuf();
+    return imparteCuvinte(buffer.str());
+}
+
+int main(int argc, char* argv[]) {
+    try {
+        Setari setari;
+
+        std::string folder;
+        if (argc > 1) {
+            folder = argv[1];
+        } else if (!citesteLinie("folder cu documente: ", folder)) {
+            return EXIT_FAILURE;
+        }
+
+        std::vector<std::string> cai;
+        for (const auto& intrare : fs::directory_iterator(folder)) {
+            if (intrare.is_regular_file()) {
+                cai.push_back(intrare.path().string());
+            }
+        }
+        std::sort(cai.begin(), cai.end());
+
+        const std::string delimitatori = construiesteDelimitatori();
+        std::vector<std::string> stopWords;
+        if (argc > 2) {
+            stopWords = citesteStopWordsDinFisier(argv[2]);
+        } else {
+            stopWords = detecteazaStopWords(cai, delimitatori, setari.pragStopWords);
+        }
+        afiseazaCuvinte("stop words", stopWords);
+
+        Tokenizer tok(delimitatori, true, stopWords);
+
+        InvIndex idx(tok);
+        for (const auto& cale : cai) {
+            try {
+                idx.addDoc(Document::fromFile(static_cast<int>(idx.getDocCount()), cale));
+            } catch (const std::runtime_error& e) {
+                std::cerr << "Document sarit: " << e.what() << "\n";
+            }
+        }
+        if (idx.getDocCount() == 0) {
+            throw std::runtime_error("Nu exista niciun document de indexat in: " + folder);
+        }
+
+        std::cout << "\nAm indexat " << idx.getDocCount() << " documente.\n" << idx.getIndexSummary() << "\n";
+        afiseazaAjutor();
+
+        std::string linie;
+        while (citesteLinie("cauta> ", linie)) {
+            if (imparteCuvinte(linie).empty()) {
+                continue;
+            }
+            if (linie == ":quit" || linie == ":q") {
+                break;
+            }
+            try {
+                if (linie.front() == ':') {
+                    proceseazaComanda(linie, idx, tok, setari);
+                } else {
+                    cautaSiAfiseaza(idx, tok, delimitatori, linie, setari);
+                }
+            } catch (const std::exception& e) {
+                std::cout << "Eroare: " << e.what() << "\n";
             }
             std::cout << "\n";
         }
+    } catch (const std::exception& e) {
+        std::cerr << "Eroare: " << e.what() << "\n";
+        return EXIT_FAILURE;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
