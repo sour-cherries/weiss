@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <iostream>
 #include <utility>
 
 class InvIndex {
@@ -22,7 +21,11 @@ private:
     std::unordered_map<std::string, std::vector<Entry>> dictionary;
 
     static int leveninDist(const std::string& s1, const std::string& s2);
+    static int sumFreq(const std::vector<Entry>& entries);
+    static const Entry* findEntryInDoc(const std::vector<Entry>& entries, int docID);
+
     const Document* findDocById(int docID) const;
+    const std::vector<Entry>* findEntries(const std::string& term) const;
 
 public:
     explicit InvIndex(const Tokenizer& tok);
@@ -31,20 +34,21 @@ public:
 
     std::vector<int> searchExact(const std::string& term) const;
     std::vector<std::string> fuzzySugg(const std::string& typo, int maxDist) const;
-
-    std::string locateTerm(int docID, const std::string& term) const;
     std::string bestTypoMatch(const std::string& typo, int maxDist) const;
     std::vector<std::string> autocomplete(const std::string& prefix) const;
-    std::vector<int> smartSearch(const std::string& query, std::string& usedTerm) const;
+    std::vector<int> smartSearch(const std::string& query, int maxDist, std::string& usedTerm) const;
 
     std::vector<int> searchAND(const std::vector<std::string>& terms) const;
     std::vector<int> searchOR(const std::vector<std::string>& terms) const;
     std::vector<int> searchNOT(const std::string& includeTerm, const std::string& excludeTerm) const;
-    std::vector<int> searchQuery(const std::string& expr, std::vector<std::string>& termsUsed) const;
+    std::vector<int> searchQuery(const std::string& expr, int maxDist, std::vector<std::string>& termsUsed) const;
 
-    std::vector<int> searchPhrase(const std::string& firstWord, const std::string& secondWord) const;
+    std::vector<int> searchPhrase(const std::string& firstWord, const std::string& secondWord, int offset) const;
     std::vector<int> searchProximity(const std::string& w1, const std::string& w2, int maxDist) const;
-    std::vector<std::pair<int, double>> searchRanked(const std::string& term) const;
+    std::vector<std::pair<int, double>> searchRanked(const std::string& query) const;
+
+    std::string locateTerm(int docID, const std::string& term, std::size_t radius, std::size_t maxShown) const;
+    std::string describeDoc(int docID, const std::vector<std::string>& terms,std::size_t radius, std::size_t maxShown) const;
 
     int getTermTotalFreq(const std::string& term) const;
     int getTermDocFreq(const std::string& term) const;
@@ -53,10 +57,8 @@ public:
     int getDocTotalWords(int docID) const;
     std::vector<std::string> getTopTermsInDoc(int docID, std::size_t topN) const;
     std::string getIndexSummary() const;
-    std::string runDiagnostics() const;
 
     std::size_t getDocCount() const;
-    std::size_t getVocabularySize() const;
     const std::vector<Document>& getDocuments() const;
 
     friend std::ostream& operator<<(std::ostream& os, const InvIndex& idx);
