@@ -6,19 +6,26 @@
 
 #include "doc.h"
 
-Document::Document(int id_, const std::string& title_, const std::string& fPath_, const std::string& content_)
-    : id(id_), title(title_), fPath(fPath_), content(content_) {
+#include <algorithm>
+#include <cctype>
+#include <cstddef>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+
+Document::Document(int id_, const std::string& title_, const std::string& path_, const std::string& content_)
+    : id(id_), title(title_), path(path_), content(content_) {
 }
 
 Document::Document(const Document& other)
-    : id(other.id), title(other.title), fPath(other.fPath), content(other.content) {
+    : id(other.id), title(other.title), path(other.path), content(other.content) {
 }
 
 Document& Document::operator=(const Document& other) {
     if (this != &other) {
         id = other.id;
         title = other.title;
-        fPath = other.fPath;
+        path = other.path;
         content = other.content;
     }
     return *this;
@@ -27,11 +34,51 @@ Document& Document::operator=(const Document& other) {
 Document::~Document() {
 }
 
-bool Document::isSpace(char c){
-    if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
-        return true;
+std::string Document::toLower(const std::string& s) {
+    std::string result = s;
+    for (char& c : result) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     }
-    return false;
+    return result;
+}
+
+std::string Document::flatten(const std::string& s) {
+    std::string result = s;
+    for (char& c : result) {
+        if (c == '\n' || c == '\r' || c == '\t') {
+            c = ' ';
+        }
+    }
+    return result;
+}
+
+std::size_t Document::findIgnoreCase(const std::string& term) const {
+    if (term.empty()) {
+        return std::string::npos;
+    }
+    return toLower(content).find(toLower(term));
+}
+
+Document Document::fromFile(int id, const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Nu pot deschide fisierul: " + path);
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+
+    std::string title = path;
+    std::size_t slash = title.find_last_of("/\\");
+    if (slash != std::string::npos) {
+        title = title.substr(slash + 1);
+    }
+    std::size_t dot = title.find_last_of('.');
+    if (dot != std::string::npos) {
+        title = title.substr(0, dot);
+    }
+
+    return Document(id, title, path, buffer.str());
 }
 
 int Document::getId() const {
@@ -42,184 +89,64 @@ const std::string& Document::getTitle() const {
     return title;
 }
 
-const std::string& Document::getfPath() const {
-    return fPath;
+const std::string& Document::getPath() const {
+    return path;
 }
 
 const std::string& Document::getContent() const {
     return content;
 }
 
-std::size_t Document::getLen() const {
-    return content.size();
+std::string Document::getSnippet(const std::string& term, std::size_t radius) const {
+    std::size_t pos = findIgnoreCase(term);
+    if (pos == std::string::npos) {
+        return "";
+    }
+
+    std::size_t matchEnd = pos + term.size();
+    std::size_t start = 0;
+    if (pos > radius) {
+        start = pos - radius;
+    }
+    std::size_t end = std::min(content.size(), matchEnd + radius);
+
+    std::string result;
+    if (start > 0) {
+        result += "...";
+    }
+    result += flatten(content.substr(start, pos - start));
+    result += "[" + flatten(content.substr(pos, term.size())) + "]";
+    result += flatten(content.substr(matchEnd, end - matchEnd));
+    if (end < content.size()) {
+        result += "...";
+    }
+    return result;
 }
 
-int Document::countLines() const {
-    if (content.empty()) {
+int Document::getLineOf(const std::string& term) const {
+    std::size_t pos = findIgnoreCase(term);
+    if (pos == std::string::npos) {
+        return -1;
+    }
+    auto endIt = content.begin() + static_cast<std::ptrdiff_t>(pos);
+    int newlines = static_cast<int>(std::count(content.begin(), endIt, '\n'));
+    return newlines + 1;
+}
+
+int Document::countOccurrences(const std::string& term) const {
+    if (term.empty()) {
         return 0;
     }
-    int lines = 1;
-    for (char c : content) {
-        if (c == '\n') {
-            lines++;
-        }
-    }
-    return lines;
-}
+    std::string text = toLower(content);
+    std::string wanted = toLower(term);
 
-int Document::countWords() const {
-    if (content.empty()) {
-        return 0;
-    }
-    int words = 0;
-    bool inWord = false;
-    for (char c : content) {
-        if (isSpace(c)) {
-                inWord = false;
-        } else {
-            if (!inWord) {
-                inWord = true;
-                words++;
-            }
-        }
-    }
-    return words;
-}
-
-int Document::countSentences() const {
-    if (content.empty()) {
-        return 0;
-    }
-    int total = 0;
-    for (char c : content) {
-        if (c == '.' || c == '!' || c == '?') {
-            total++;
-        }
-    }
-    if (total == 0) {
-        return 1;
-    }
-    return total;
-}
-
-int Document::countParagraphs() const {
-    if (content.empty()) {
-        return 0;
-    }
-    int total = 1;
-    for (std::size_t i = 0; i + 1 < content.size(); ++i) {
-        if (content[i] == '\n' && content[i + 1] == '\n') {
-            total++;
-        }
-    }
-    return total;
-}
-
-bool Document::hasSubstring(const std::string& sub) const {
-    if (sub.empty()) {
-        return false;
-    }
-    if (content.find(sub) != std::string::npos) {
-        return true;
-    }
-    return false;
-}
-
-int Document::countSubstring(const std::string& sub) const {
-    if (sub.empty() || content.empty()) {
-        return 0;
-    }
     int count = 0;
-    std::size_t pos = content.find(sub, 0);
+    std::size_t pos = text.find(wanted);
     while (pos != std::string::npos) {
         count++;
-        pos = content.find(sub, pos + sub.size());
+        pos = text.find(wanted, pos + wanted.size());
     }
     return count;
-}
-
-std::string Document::getExtension() const {
-    std::size_t dotPos = fPath.find_last_of('.');
-    if (dotPos == std::string::npos) {
-        return "";
-    }
-    return fPath.substr(dotPos + 1);
-}
-
-std::string Document::getFolder() const {
-    std::size_t slashPos = fPath.find_last_of("/\\");
-    if (slashPos == std::string::npos) {
-        return "";
-    }
-    return fPath.substr(0, slashPos);
-}
-
-std::string Document::getPreview(std::size_t maxChars) const {
-    if (content.size() <= maxChars) {
-        return content;
-    }
-    std::string res = content.substr(0, maxChars);
-    for (char& c : res) {
-        if (c == '\n' || c == '\r') {
-            c = ' ';
-        }
-    }
-    res += "...";
-    return res;
-}
-
-std::vector<std::string> Document::splitIntoLines() const {
-    std::vector<std::string> lines;
-    std::string current;
-    for (char c : content) {
-        if (c == '\n') {
-            lines.push_back(current);
-            current.clear();
-        } else if (c != '\r') {
-            current.push_back(c);
-        }
-    }
-    if (!current.empty()) {
-        lines.push_back(current);
-    }
-    return lines;
-}
-
-std::string Document::getLineAt(int lineIndex) const {
-    std::vector<std::string> all = splitIntoLines();
-    if (lineIndex < 0) {
-        return "";
-    }
-    if (static_cast<std::size_t>(lineIndex) >= all.size()) {
-        return "";
-    }
-    return all[static_cast<std::size_t>(lineIndex)];
-}
-
-double Document::getReadingTimeMinutes() const {
-    int w = countWords();
-    if (w <= 0) {
-        return 0.0;
-    }
-    return static_cast<double>(w) / 200.0;
-}
-
-std::string Document::getStats() const {
-    std::string info = "Doc #" + std::to_string(id) + " [" + title + "]\n";
-    info += " - cale: " + fPath + " (folder: " + getFolder() + ", ext: " + getExtension() + ")\n";
-    info += " - dimensiune: " + std::to_string(getLen()) + " bytes, "
-          + std::to_string(countLines()) + " linii, "
-          + std::to_string(countWords()) + " cuvinte\n";
-    info += " - structura: " + std::to_string(countSentences()) + " propozitii, "
-          + std::to_string(countParagraphs()) + " paragrafe, "
-          + std::to_string(splitIntoLines().size()) + " randuri active\n";
-    info += " - timp citire: " + std::to_string(getReadingTimeMinutes()) + " min\n";
-    if (hasSubstring("the")) {
-        info += " - aparitii 'the': " + std::to_string(countSubstring("the")) + "\n";
-    }
-    info += " - prima linie: " + getLineAt(0).substr(0, 20) + "\n";
-    info += " - preview: " + getPreview(30);
-    return info;
 }
 
 std::ostream& operator<<(std::ostream& os, const Document& doc) {
@@ -227,5 +154,3 @@ std::ostream& operator<<(std::ostream& os, const Document& doc) {
        << " (" << doc.content.size() << " bytes)";
     return os;
 }
-
-
