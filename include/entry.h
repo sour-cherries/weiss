@@ -5,8 +5,9 @@
 #ifndef OOP_ENTRY_H
 #define OOP_ENTRY_H
 
-#include <vector>
+#include <cstddef>
 #include <iostream>
+#include <vector>
 
 class Entry {
 private:
@@ -14,32 +15,29 @@ private:
     int freq;
     std::vector<int> pos;
 
-    bool isValidIdx(int idx) const;
+    static constexpr double K1 = 1.2;
+    static constexpr double B = 0.75;
+
+    std::size_t firstIndexNotBefore(int p) const;
 
 public:
     Entry(int docID, int firstPos);
 
-    void addPos(int newPOS);
+    void addPos(int newPos);
 
     int getDocID() const;
     int getFreq() const;
     const std::vector<int>& getPos() const;
+    int getFirstPos() const;
 
     bool hasPos(int targetPos) const;
-    int getFirstPos() const;
-    int getLastPos() const;
-    int getPosAt(int idx) const;
-    int getSpan() const;
-    int getMinGap() const;
-    int getMaxGap() const;
-    double getAvgGap() const;
-    int countInRange(int startPos, int endPos) const;
-    int getMinDistTo(const Entry& other) const;
+    std::vector<int> getPhraseStarts(const Entry& next, int offset) const;
     bool isFollowedBy(const Entry& other, int maxOffset) const;
-    std::vector<int> getPositionsInWindow(int centerPos, int radius) const;
-    double getRelativeDensity(int totalDocWords) const;
+    int getMinDistTo(const Entry& other) const;
+    int getBestWindowStart(int windowSize) const;
 
-    std::string getProfile(const Entry& other, int totalDocWords) const;
+    double getRelativeDensity(int totalDocWords) const;
+    double getBM25(double idf, int docLen, double avgDocLen) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Entry& entry);
 };
