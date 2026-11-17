@@ -2,6 +2,32 @@
 
 un motor de cautare scris in C++ care indexeaza fisiere text/JSON in memorie si ofera suport pentru cautari booleene (AND/OR), cu functii de autocomplete in timp real, toleranta de typo-uri si ordonarea a rezultatelor dupa relevanta 
 
+### Cautarea in fisiere (`cauta> `)
+
+Dupa ce se incarca documentele, iti apare promptul `cauta> `. Aici poti sa scrii direct ce vrei sa gasesti:
+
+* **Cuvinte simple:** scrii un cuvant sau mai multe (ex: `security` sau `token signature`). Daca gresesti o litera sau doua, programul incearca sa corecteze singur cuvantul si cauta varianta cea mai apropiata.
+* **Cautari cu operatori logici:** poti combina cuvintele cu `and`, `or` si `not`.
+  * `algorithm and data` : fisiere care au ambele cuvinte
+  * `handshake or certificate` : fisiere care au macar unul dintre cuvinte
+  * `data not java` : fisiere care au `data`, dar nu au `java`
+
+Pentru fiecare fisier gasit, rezultatele sunt ordonate dupa relevanta (scor BM25) si primesti o bara care arata pe unde apar cuvintele in text, linia, coloana si bucata de text din jurul lor. Daca nu exista niciun rezultat, iti sugereaza cuvinte asemanatoare prin autocomplete.
+
+### Comenzi speciale (incep cu `:`)
+
+* `:help` : afiseaza lista de comenzi si cateva exemple rapide.
+* `:stats` : arata un rezumat al indexului si statistici pentru fiecare fisier (cati termeni unici are, cate cuvinte in total si top 5 cele mai dese cuvinte).
+* `:index` : afiseaza tot indexul inversat (toate documentele si pozitiile fiecarui cuvant).
+* `:complete <prefix>` : iti da toate cuvintele din fisiere care incep cu prefixul respectiv (ex: `:complete sec`).
+* `:phrase <w1> <w2>` : cauta doua cuvinte care apar unul imediat dupa altul (ex: `:phrase client hello`).
+* `:near <w1> <w2> <n>` : cauta doua cuvinte care apar la cel mult `n` cuvinte distanta unul de altul (ex: `:near security protocol 5`).
+* `:set typo <n>` : seteaza cate litere gresite sunt permise la corectarea automata (implicit este `2`).
+* `:set raza <n>` : seteaza cate caractere sa iti arate in stanga si in dreapta cuvantului gasit (implicit este `30`).
+* `:set pozitii <n>` : seteaza cate aparitii ale unui cuvant sa afiseze maxim per fisier (implicit este `5`).
+* `:set culori <0 sau 1>` : porneste (`1`) sau opreste (`0`) evidentierea colorata din consola (implicit este `1`).
+* `:demo` : ruleaza un mic demo care testeaza metodele din clasele `Document`, `Tokenizer` si `Entry` (copiere, atribuire, snippet, densitate si scor BM25).
+* `:quit` sau `:q` : inchide aplicatia.
 
 
 ### Folosiți template-ul corespunzător grupei voastre!
