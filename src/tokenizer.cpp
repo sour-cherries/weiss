@@ -3,18 +3,19 @@
 //
 
 #include "tokenizer.h"
-#include <cctype>
-#include <algorithm>
 
-Tokenizer::Tokenizer(const std::string& delimiter_, bool convTOlow_)
+#include <algorithm>
+#include <cctype>
+
+Tokenizer::Tokenizer(const std::string& delimiter_, bool convTOlow_, const std::vector<std::string>& stopWords_)
     : delimiter(delimiter_), convTOlow(convTOlow_) {
+    for (const auto& w : stopWords_) {
+        stopWords.push_back(cleanTok(w));
+    }
 }
 
 bool Tokenizer::isDelimiter(char c) const {
-    if (delimiter.find(c) != std::string::npos) {
-        return true;
-    }
-    return false;
+    return std::isspace(static_cast<unsigned char>(c)) != 0 || delimiter.find(c) != std::string::npos;
 }
 
 std::string Tokenizer::cleanTok(const std::string& raw) const {
@@ -52,100 +53,28 @@ std::vector<std::pair<std::string, int>> Tokenizer::tokenize(const std::string& 
     return tokens;
 }
 
-const std::string& Tokenizer::getDelimiter() const {
-    return delimiter;
-}
-
-bool Tokenizer::isLowenable() const {
-    return convTOlow;
-}
-
 int Tokenizer::countTokens(const std::string& text) const {
-    auto all = tokenize(text);
-    return static_cast<int>(all.size());
+    return static_cast<int>(tokenize(text).size());
 }
 
-std::vector<std::string> Tokenizer::extractWordsOnly(const std::string& text) const {
-    std::vector<std::string> res;
-    auto all = tokenize(text);
-    for (const auto& p : all) {
-        res.push_back(p.first);
+std::string Tokenizer::normalizeWord(const std::string& word) const {
+    auto tokens = tokenize(word);
+    if (tokens.empty()) {
+        return "";
     }
-    return res;
-}
-
-std::vector<std::string> Tokenizer::extractUniqueWords(const std::string& text) const {
-    std::vector<std::string> uniqueWords;
-    auto all = tokenize(text);
-    for (const auto& p : all) {
-        const std::string& w = p.first;
-        if (std::find(uniqueWords.begin(), uniqueWords.end(), w) == uniqueWords.end()) {
-            uniqueWords.push_back(w);
-        }
-    }
-    std::sort(uniqueWords.begin(), uniqueWords.end());
-    return uniqueWords;
-}
-
-std::vector<std::string> Tokenizer::filterByMinLength(const std::string& text, std::size_t minLen) const {
-    std::vector<std::string> res;
-    auto all = tokenize(text);
-    for (const auto& p : all) {
-        if (p.first.size() >= minLen) {
-            res.push_back(p.first);
-        }
-    }
-    return res;
+    return tokens.front().first;
 }
 
 bool Tokenizer::isStopWord(const std::string& word) const {
-    std::string w = cleanTok(word);
-    static const std::vector<std::string> stops = {
-        "the", "and", "or", "in", "on", "at", "to", "of", "for",
-        "with", "by", "from", "as", "is", "are", "was", "be", "a", "an"
-    };
-    for (const auto& s : stops) {
-        if (w == s) {
-            return true;
-        }
-    }
-    return false;
+    return std::find(stopWords.begin(), stopWords.end(), cleanTok(word)) != stopWords.end();
 }
 
 std::vector<std::string> Tokenizer::removeStopWords(const std::string& text) const {
     std::vector<std::string> res;
-    auto all = tokenize(text);
-    for (const auto& p : all) {
+    for (const auto& p : tokenize(text)) {
         if (!isStopWord(p.first)) {
             res.push_back(p.first);
         }
-    }
-    return res;
-}
-
-std::string Tokenizer::normalizeWord(const std::string& word) const {
-    std::string raw;
-    for (char c : word) {
-        if (!isDelimiter(c)) {
-            raw.push_back(c);
-        }
-    }
-    return cleanTok(raw);
-}
-
-std::string Tokenizer::stripDelimiters(const std::string& text) const {
-    std::string res;
-    for (char c : text) {
-        if (isDelimiter(c)) {
-            if (!res.empty() && res.back() != ' ') {
-                res.push_back(' ');
-            }
-        } else {
-            res.push_back(c);
-        }
-    }
-    if (!res.empty() && res.back() == ' ') {
-        res.pop_back();
     }
     return res;
 }
@@ -161,49 +90,17 @@ std::string Tokenizer::joinTokens(const std::vector<std::string>& words, const s
     return res;
 }
 
-std::string Tokenizer::findLongestToken(const std::string& text) const {
-    auto all = tokenize(text);
-    std::string longest;
-    for (const auto& p : all) {
-        if (p.first.size() > longest.size()) {
-            longest = p.first;
-        }
-    }
-    return longest;
-}
-
-double Tokenizer::getAverageTokenLength(const std::string& text) const {
-    auto all = tokenize(text);
-    if (all.empty()) {
-        return 0.0;
-    }
-    std::size_t sum = 0;
-    for (const auto& p : all) {
-        sum += p.first.size();
-    }
-    return static_cast<double>(sum) / static_cast<double>(all.size());
-}
-
-std::string Tokenizer::analyzeSample(const std::string& sample) const {
-    auto faraStop = removeStopWords(sample);
-    std::string out = "Tokenizer [low=" + std::to_string(isLowenable())
-                    + ", delimLen=" + std::to_string(getDelimiter().size()) + "]\n";
-    out += " - total=" + std::to_string(countTokens(sample))
-         + " words=" + std::to_string(extractWordsOnly(sample).size())
-         + " unique=" + std::to_string(extractUniqueWords(sample).size())
-         + " min4=" + std::to_string(filterByMinLength(sample, 4).size()) + "\n";
-    out += " - stop('the')=" + std::to_string(isStopWord("the"))
-         + " noStop=" + std::to_string(faraStop.size())
-         + " joined=" + joinTokens(faraStop, "-") + "\n";
-    out += " - norm=" + normalizeWord(" Test! ")
-         + " strip=" + stripDelimiters(sample)
-         + " long=" + findLongestToken(sample)
-         + " avg=" + std::to_string(getAverageTokenLength(sample));
-    return out;
+std::string Tokenizer::analyzeSample(const std::string& sample, const std::string& sep) const {
+    std::vector<std::string> faraStop = removeStopWords(sample);
+    return "Tokenizer: total=" + std::to_string(countTokens(sample))
+         + " faraStop=" + std::to_string(faraStop.size())
+         + " -> " + joinTokens(faraStop, sep)
+         + " | primul=" + normalizeWord(sample);
 }
 
 std::ostream& operator<<(std::ostream& os, const Tokenizer& tok) {
-    os << "Tokenizer [delimiter: \"" << tok.delimiter << "\" ~ lowercase"
-       << (tok.convTOlow ? "true" : "false") << "]";
+    os << "Tokenizer [delimiter: \"" << tok.delimiter << "\" ~ lowercase: "
+       << (tok.convTOlow ? "true" : "false")
+       << " ~ stopWords: " << tok.stopWords.size() << "]";
     return os;
 }
