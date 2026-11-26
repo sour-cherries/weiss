@@ -2,6 +2,7 @@
 // Created by patri on 29.10.2026.
 //
 
+
 #ifndef OOP_INDEX_H
 #define OOP_INDEX_H
 
@@ -12,7 +13,6 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <utility>
 
 class InvIndex {
 private:
@@ -25,12 +25,13 @@ private:
     static const Entry* findEntryInDoc(const std::vector<Entry>& entries, int docID);
 
     const Document* findDocById(int docID) const;
-    const std::vector<Entry>* findEntries(const std::string& term) const;
 
 public:
     explicit InvIndex(const Tokenizer& tok);
 
     void addDoc(const Document& doc);
+
+    const std::vector<Entry>* findEntries(const std::string& term) const;
 
     std::vector<int> searchExact(const std::string& term) const;
     std::vector<std::string> fuzzySugg(const std::string& typo, int maxDist) const;
@@ -45,7 +46,6 @@ public:
 
     std::vector<int> searchPhrase(const std::string& firstWord, const std::string& secondWord, int offset) const;
     std::vector<int> searchProximity(const std::string& w1, const std::string& w2, int maxDist) const;
-    std::vector<std::pair<int, double>> searchRanked(const std::string& query) const;
 
     std::string locateTerm(int docID, const std::string& term, std::size_t radius, std::size_t maxShown) const;
     std::string describeDoc(int docID, const std::vector<std::string>& terms,std::size_t radius, std::size_t maxShown) const;

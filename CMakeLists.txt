@@ -75,6 +75,7 @@ target_sources(${MAIN_LIBRARY_NAME}
         src/index.cpp
         src/scorer.cpp
         src/exceptions.cpp
+        src/ranker.cpp
 )
 
 # NOTE: Add all defined targets (e.g. executables, libraries, etc. )

@@ -1,13 +1,10 @@
 //
 // Created by patri on 29.10.2026.
 //
-
 #include "index.h"
 #include "exceptions.h"
 
 #include <algorithm>
-#include <cmath>
-#include <map>
 
 InvIndex::InvIndex(const Tokenizer& tok)
     : tokenizer(tok) {
@@ -347,44 +344,6 @@ std::vector<int> InvIndex::searchProximity(const std::string& w1, const std::str
     }
     std::sort(result.begin(), result.end());
     return result;
-}
-
-std::vector<std::pair<int, double>> InvIndex::searchRanked(const std::string& query) const {
-    std::map<int, double> scores;
-    if (documents.empty()) {
-        return {};
-    }
-
-    double totalDocs = static_cast<double>(documents.size());
-    double sumLen = 0.0;
-    for (const auto& doc : documents) {
-        sumLen += static_cast<double>(getDocTotalWords(doc.getId()));
-    }
-    double avgLen = sumLen / totalDocs;
-
-    for (const auto& token : tokenizer.tokenize(query)) {
-        const std::vector<Entry>* entries = findEntries(token.first);
-        if (entries == nullptr) {
-            continue;
-        }
-
-        double docsWithTerm = static_cast<double>(entries->size());
-        double idf = std::log1p(totalDocs / docsWithTerm);
-
-        for (const auto& entry : *entries) {
-            int docLen = getDocTotalWords(entry.getDocID());
-            scores[entry.getDocID()] += entry.getBM25(idf, docLen, avgLen);
-        }
-    }
-
-    std::vector<std::pair<int, double>> ranked(scores.begin(), scores.end());
-    std::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
-        if (a.second != b.second) {
-            return a.second > b.second;
-        }
-        return a.first < b.first;
-    });
-    return ranked;
 }
 
 std::string InvIndex::locateTerm(int docID, const std::string& term,

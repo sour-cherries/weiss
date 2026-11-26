@@ -36,6 +36,7 @@ public:
     virtual std::unique_ptr<Scorer> clone() const = 0;
 
     double score(const Entry& entry, const ScoreContext& ctx) const;
+    bool hasName(const std::string& wanted) const;
     void print(std::ostream& os) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Scorer& scorer);
