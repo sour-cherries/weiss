@@ -1,239 +1,104 @@
-# weiss - a cli search engine
-
-un motor de cautare scris in C++ care indexeaza fisiere text/JSON in memorie si ofera suport pentru cautari booleene (AND/OR), cu functii de autocomplete in timp real, toleranta de typo-uri si ordonarea a rezultatelor dupa relevanta 
-
-### Cautarea in fisiere (`cauta> `)
-
-Dupa ce se incarca documentele, iti apare promptul `cauta> `. Aici poti sa scrii direct ce vrei sa gasesti:
-
-* **Cuvinte simple:** scrii un cuvant sau mai multe (ex: `security` sau `token signature`). Daca gresesti o litera sau doua, programul incearca sa corecteze singur cuvantul si cauta varianta cea mai apropiata.
-* **Cautari cu operatori logici:** poti combina cuvintele cu `and`, `or` si `not`.
-  * `algorithm and data` : fisiere care au ambele cuvinte
-  * `handshake or certificate` : fisiere care au macar unul dintre cuvinte
-  * `data not java` : fisiere care au `data`, dar nu au `java`
-
-Pentru fiecare fisier gasit, rezultatele sunt ordonate dupa relevanta (scor BM25) si primesti o bara care arata pe unde apar cuvintele in text, linia, coloana si bucata de text din jurul lor. Daca nu exista niciun rezultat, iti sugereaza cuvinte asemanatoare prin autocomplete.
-
-### Comenzi speciale (incep cu `:`)
-
-* `:help` : afiseaza lista de comenzi si cateva exemple rapide.
-* `:stats` : arata un rezumat al indexului si statistici pentru fiecare fisier (cati termeni unici are, cate cuvinte in total si top 5 cele mai dese cuvinte).
-* `:index` : afiseaza tot indexul inversat (toate documentele si pozitiile fiecarui cuvant).
-* `:complete <prefix>` : iti da toate cuvintele din fisiere care incep cu prefixul respectiv (ex: `:complete sec`).
-* `:phrase <w1> <w2>` : cauta doua cuvinte care apar unul imediat dupa altul (ex: `:phrase client hello`).
-* `:near <w1> <w2> <n>` : cauta doua cuvinte care apar la cel mult `n` cuvinte distanta unul de altul (ex: `:near security protocol 5`).
-* `:set typo <n>` : seteaza cate litere gresite sunt permise la corectarea automata (implicit este `2`).
-* `:set raza <n>` : seteaza cate caractere sa iti arate in stanga si in dreapta cuvantului gasit (implicit este `30`).
-* `:set pozitii <n>` : seteaza cate aparitii ale unui cuvant sa afiseze maxim per fisier (implicit este `5`).
-* `:set culori <0 sau 1>` : porneste (`1`) sau opreste (`0`) evidentierea colorata din consola (implicit este `1`).
-* `:demo` : ruleaza un mic demo care testeaza metodele din clasele `Document`, `Tokenizer` si `Entry` (copiere, atribuire, snippet, densitate si scor BM25).
-* `:quit` sau `:q` : inchide aplicatia.
+```
+__        __ _____ ___ ____  ____
+\ \      / /| ____|_ _/ ___|/ ___|
+ \ \ /\ / / |  _|  | |\___ \\___ \
+  \ V  V /  | |___ | | ___) |___) |
+   \_/\_/   |_____|___|____/|____/
+    find your words with Weiss  
 
 
-### Folosiți template-ul corespunzător grupei voastre!
-
-| Laborant  | Link template                                |
-|-----------|----------------------------------------------|
-| Dragoș B  | https://github.com/Ionnier/oop-template      |
-| Tiberiu M | https://github.com/MaximTiberiu/oop-template |
-| Marius MC | https://github.com/mcmarius/oop-template     |
-
-### Important!
-
-Aveți voie cu agenți care generează cod doar dacă păstrați AGENTS.md și de `.internal/` *pe toată durata semestrului*.
-Știm că se poate trișa foarte ușor. Ideea nu este să învățați să trișați mai bine, ci să înțelegeți ce faceți.
-Codul generat pus "ca să fie"/pe care nu îl înțelegeți nu se punctează.
-
-Codul din proiect trebuie să poată fi ușor de înțeles și de modificat de către altcineva. Pentru detalii, veniți la ore.
-
-O cerință nu se consideră îndeplinită dacă este realizată doar prin cod generat.
-
-- **Fără cod de umplutură/fără sens!**
-- **Fără copy-paste!**
-- **Fără variabile globale!**
-- **Fără atribute publice!**
-- **Fără date în cod!** Datele vor fi citite din fișier, rețea sau bază de date, aveți exemple destule.
-- **Obligatoriu** fișiere cu date mai multe din care să citiți, obligatoriu cu biblioteci externe: fișiere (local sau server) sau baze de date
-- obligatoriu (TBD) să integrați cel puțin două biblioteci externe pe lângă cele pentru stocare
-
-**NOU!** Livrabile pentru toate temele:
-- aplicație
-- bibliotecă
-- interfața publică pentru bibliotecă
-
-### Tema 0
-
-- [x] Nume proiect (poate fi schimbat ulterior)
-- [x] Scurtă descriere a temei alese, ce v-ați propus să implementați
-
-## Tema 1
-
-#### Cerințe
-- [x] definirea a minim **3-4 clase** folosind compunere cu clasele definite de voi; moștenirile nu se iau în considerare aici
-- [x] constructori de inițializare cu parametri pentru fiecare clasă
-- [x] pentru o aceeași (singură) clasă: constructor de copiere, `operator=` de copiere, destructor
-<!-- - [ ] pentru o altă clasă: constructor de mutare, `operator=` de mutare, destructor -->
-<!-- - [ ] pentru o altă clasă: toate cele 5 funcții membru speciale -->
-- [x] `operator<<` pentru **toate** clasele pentru afișare (`std::ostream`) folosind compunere de apeluri cu `operator<<`
-- [x] cât mai multe `const` (unde este cazul) și funcții `private`
-- [x] implementarea a minim 3 funcții membru publice pentru funcționalități netriviale specifice temei alese, dintre care cel puțin 1-2 funcții mai complexe
-  - nu doar citiri/afișări sau adăugat/șters elemente într-un/dintr-un vector
-- [x] scenariu de utilizare **cu sens** a claselor definite:
-  - crearea de obiecte și apelarea tuturor funcțiilor membru publice în main
-  - vor fi adăugate în fișierul `tastatura.txt` DOAR exemple de date de intrare de la tastatură (dacă există) pentru a acoperi cât mai multe cazuri; dacă aveți nevoie de date din fișiere, creați alte fișiere separat
-- [x] minim 52-60% din codul propriu să fie C++, adică să aveți mai mult cod decât ce e inclus în template; testele nu se pun, nu vă luați după procentajul din interfața web; detalii la ore
-- [x] `.gitattributes` configurat corect (nu trebuie făcute modificări aici)
-- [x] tag de `git`: de exemplu `v0.1`
-- [x] serviciu de integrare continuă (CI) cu **toate bifele**; exemplu: GitHub Actions
-- [ ] code review #1 2 proiecte
-
-## Tema 2
-
-#### Cerințe
-- [ ] separarea codului din clase în `.h` (sau `.hpp`) și `.cpp`
-- [ ] moșteniri:
-  - minim o clasă de bază și **3 clase derivate** din aceeași ierarhie; cele 3 derivate moștenesc aceeași clasă de bază
-  - ierarhia trebuie să fie cu bază proprie, nu derivată dintr-o clasă predefinită
-  - [ ] funcții virtuale (pure) apelate prin pointeri de bază din clasa care conține atributul de tip pointer de bază
-    - minim o funcție virtuală va fi **specifică temei** (i.e. nu simple citiri/afișări sau preluate din biblioteci i.e. draw/update/render)
-    - constructori virtuali (clone): sunt necesari, dar nu se consideră funcții specifice temei
-    - afișare virtuală, interfață non-virtuală
-  - [ ] apelarea constructorului din clasa de bază din constructori din derivate
-  - [ ] clasă cu atribut de tip pointer la o clasă de bază cu derivate; aici apelați funcțiile virtuale prin pointer de bază, eventual prin interfața non-virtuală din bază
-    - [ ] suprascris cc/op= pentru copieri/atribuiri corecte, copy and swap
-    - [ ] `dynamic_cast`/`std::dynamic_pointer_cast` pentru downcast cu sens
-    - [ ] smart pointers (recomandat, opțional)
-- [ ] excepții
-  - [ ] ierarhie proprie cu baza `std::exception` sau derivată din `std::exception`; minim **3** clase pentru erori specifice distincte
-    - clasele de excepții trebuie să trateze categorii de erori distincte (exemplu de erori echivalente: citire fișiere cu diverse extensii)
-  - [ ] utilizare cu sens: de exemplu, `throw` în constructor (sau funcție care întoarce un obiect), `try`/`catch` în `main`
-  - această ierarhie va fi complet independentă de ierarhia cu funcții virtuale
-- [ ] funcții și atribute `static`
-- [ ] STL
-- [ ] cât mai multe `const`
-- [ ] funcții *de nivel înalt*, de eliminat cât mai mulți getters/setters/funcții low-level
-- [ ] minim 75-78% din codul propriu să fie C++; testele nu se pun, nu vă luați după procentajul din interfața web
-- [ ] la sfârșit: commit separat cu adăugarea unei noi clase derivate fără a modifica restul codului, **pe lângă cele 3 derivate deja adăugate** din aceeași ierarhie
-  - noua derivată nu poate fi una existentă care a fost ștearsă și adăugată din nou
-  - noua derivată va fi integrată în codul existent (adică va fi folosită, nu adăugată doar ca să fie)
-- [ ] tag de `git` pe commit cu **toate bifele**: de exemplu `v0.2`
-- [ ] code review #2 2 proiecte
-
-## Tema 3
-
-#### Cerințe
-- [ ] 2 șabloane de proiectare (design patterns)
-- [ ] o clasă șablon cu sens; minim **2 instanțieri**
-  - [ ] preferabil și o funcție șablon (template) cu sens; minim 2 instanțieri
-- [ ] minim 80-90% din codul propriu să fie C++; testele nu se pun, nu vă luați după procentajul din interfața web
-<!-- - [ ] o specializare pe funcție/clasă șablon -->
-- [ ] tag de `git` pe commit cu **toate bifele**: de exemplu `v0.3` sau `v1.0`
-- [ ] code review #3 2 proiecte
-
-## Instrucțiuni de compilare
-
-Proiectul este configurat cu CMake.
-
-Instrucțiuni pentru terminal:
-
-1. Pasul de configurare
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-# sau ./scripts/cmake.sh configure
+        .-"""-.
+       /  o o  \
+      |    O    |  ,---.
+      |         | / ?_? \    <- "psst... its on the line 42, column 7"
+      '~\/\/\/~'  \_____/\
+                          \
 ```
 
-Sau pe Windows cu GCC folosind Git Bash:
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -G Ninja
-# sau ./scripts/cmake.sh configure -g Ninja
+Un motor de căutare în documente text, scris în C++ pentru proiectul de OOP.
+Îi dai un folder cu fișiere, el le indexează, iar tu cauți cuvinte, fraze sau combinații cu `and` / `or` / `not`. Greșelile de scriere se corectează automat.
+
+## Build
+
+Ai nevoie de:
+
+- CMake 3.28 sau mai nou
+- un compilator cu suport C++23 (GCC 13+, Clang 17+ sau MSVC 2022)
+
+Nu are dependențe externe, folosește doar biblioteca standard.
+
+```bash
+git clone <link-repo>
+cd <nume-repo>
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 
-Pentru a configura cu ASan, avem opțiunea `-DUSE_ASAN=ON` (nu merge pe Windows cu GCC):
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DUSE_ASAN=ON
-# sau ./scripts/cmake.sh configure -e "-DUSE_ASAN=ON"
+Rezultă biblioteca `liboop.a` (clasele din `src/`) și executabilul `oop_main` (din `app/main.cpp`).
+
+Opțiuni utile:
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Debug     # pentru depanare
+cmake -B build -DUSE_ASAN=ON                # AddressSanitizer
+cmake --build build --parallel              # compilare mai rapidă
 ```
 
+Pe Windows (Visual Studio), executabilul e în `build\Release\oop_main.exe`.
 
-La acest pas putem cere să generăm fișiere de proiect pentru diverse medii de lucru.
+## Rulare
 
-
-2. Pasul de compilare
-```sh
-cmake --build build --config Debug --parallel 6
-# sau ./scripts/cmake.sh build
+```bash
+./build/oop_main <folder_cu_documente> [fisier_stop_words]
 ```
 
-Cu opțiunea `parallel` specificăm numărul de fișiere compilate în paralel.
+- Dacă nu dai folderul ca argument, programul te întreabă de el.
+- Dacă nu dai fișier de stop words, acestea se detectează automat (cuvintele care apar foarte des).
 
-3. Pasul de testare
-```sh
-ctest --test-dir build -C Debug --output-on-failure
-# sau ./scripts/cmake.sh test
+Exemple de date de intrare sunt în `tastatura.txt`:
+
+```bash
+./build/oop_main assets < tastatura.txt
 ```
 
-Testele sunt **condiție, nu punctaj**: CI verde include și testele. Nu se punctează nici numărul
-lor, nici acoperirea (coverage). Testați logica de domeniu din `src/`, prin interfața publică din
-`include/`, fără `std::cin` și fără căi absolute. Ce e greu de testat — UI complex, evenimente
-aleatoare, un server real — rămâne în `app/` și se verifică prin smoke tests și la demo.
+## Exemple de căutare
 
-4. Pasul de instalare (opțional)
-```sh
-cmake --install build --config Debug --prefix install_dir
-# sau ./scripts/cmake.sh install
+```
+cauta> algorithm
+cauta> algorithm and data
+cauta> data not java
+cauta> algoritm            <- greseala, se corecteaza singur
 ```
 
-Vezi și [`scripts/cmake.sh`](scripts/cmake.sh).
+## Comenzi
 
-Observație: folderele `build/` și `install_dir/` sunt adăugate în fișierul `.gitignore` deoarece
-conțin fișiere generate și nu ne ajută să le versionăm.
+| Comandă | Ce face |
+|---|---|
+| `:help` | afișează ajutorul |
+| `:stats` | statistici despre index și documente |
+| `:complete <prefix>` | autocomplete |
+| `:phrase <w1> <w2>` | caută o frază (w1 urmat direct de w2) |
+| `:near <w1> <w2> <n>` | w1 și w2 la cel mult n cuvinte distanță |
+| `:set typo\|raza\|pozitii\|culori <valoare>` | schimbă setările |
+| `:index` | afișează tot indexul |
+| `:demo` | demonstrație pentru clasele proiectului |
+| `:quit` | ieșire |
 
-## Instrucțiuni pentru a rula executabilul
 
-Există mai multe variante:
+## Resurse folosite
 
-1. Din directorul de build (implicit `build`). Executabilul se află la locația `./build/oop_main` după ce a fost rulat pasul de compilare al proiectului (`./scripts/cmake.sh build` - pasul 2 de mai sus).
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/) (Manning, Raghavan, Schütze): inverted index, tf-idf, scoring
+- [learncpp.com](https://www.learncpp.com/): moștenire, funcții virtuale, smart pointers, excepții
+- [cppreference.com](https://en.cppreference.com/): documentația STL
+- [CMake Documentation](https://cmake.org/cmake/help/latest/): configurarea build-ului
+- [Refactoring Guru](https://refactoring.guru/design-patterns): design patterns
+- [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines): clase și ierarhii
+- [Levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance): corectarea greșelilor de scriere
+- [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25): formula de scor folosită la ranking
 
-```sh
-./build/oop_main
-```
+## Licență
 
-2. Din directorul `install_dir`. Executabilul se află la locația `./install_dir/bin/oop_main` după ce a fost rulat pasul de instalare (`./scripts/cmake.sh install` - pasul 4 de mai sus).
+The project is licensed under [AGPLv3](https://github.com/sour-cherries/weiss/blob/main/LICENSE).
 
-```sh
-./install_dir/bin/oop_main
-```
+The [template repository](https://github.com/mcmarius/oop-template) itself is licensed under [Unlicense](https://github.com/sour-cherries/weiss/blob/main/LICENSE.template).
 
-3. Rularea programului folosind Valgrind se poate face executând script-ul `./scripts/run_valgrind.sh` din rădăcina proiectului. Pe Windows acest script se poate rula folosind WSL (Windows Subsystem for Linux). Valgrind se poate rula în modul interactiv folosind: `RUN_INTERACTIVE=true ./scripts/run_valgrind.sh`
-
-Implicit, nu se rulează interactiv, iar datele pentru `std::cin` sunt preluate din fișierul `tastatura.txt`.
-
-```sh
-RUN_INTERACTIVE=true ./scripts/run_valgrind.sh
-# sau
-./scripts/run_valgrind.sh
-```
-
-Valgrind rulează și testele.
-
-4. Pentru a rula executabilul folosind ASan, este nevoie ca la pasul de configurare (vezi mai sus) să fie activat acest sanitizer. Ar trebui să meargă pe macOS și Linux. Pentru Windows, ar merge doar cu MSVC (nerecomandat).
-
-Comanda este aceeași ca la pasul 1 sau 2. Nu merge combinat cu Valgrind.
-
-```sh
-./build/oop_main
-./build/oop_test
-# sau
-./install_dir/bin/oop_main
-./install_dir/bin/oop_test
-```
-
-## License
-
-The project is licensed under [AGPLv3](LICENSE).
-
-The [template repository](https://github.com/mcmarius/oop-template) itself is licensed under [Unlicense](LICENSE.template).
-
-## Resurse
-
-- adăugați trimiteri **detaliate** către resursele externe care v-au ajutat sau pe care le-ați folosit
