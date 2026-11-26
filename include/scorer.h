@@ -29,14 +29,13 @@ private:
 
 public:
     explicit Scorer(const std::string& name);
-    Scorer(const Scorer& other) = default;
-    Scorer& operator=(const Scorer& other) = default;
+    Scorer(const Scorer& other);
+    Scorer& operator=(const Scorer& other);
     virtual ~Scorer();
 
     virtual std::unique_ptr<Scorer> clone() const = 0;
 
     double score(const Entry& entry, const ScoreContext& ctx) const;
-    const std::string& getName() const;
     void print(std::ostream& os) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Scorer& scorer);

@@ -73,7 +73,7 @@ Document Document::fromFile(int id, const std::string& path) {
     }
     std::size_t dot = title.find_last_of('.');
     if (dot != std::string::npos && dot > 0) {
-        title = title.substr(0, dot);
+        title.resize(dot);
     }
 
     return Document(id, title, path, buffer.str());

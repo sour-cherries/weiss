@@ -2,6 +2,8 @@
 // Created by patri on 24.11.2026.
 //
 
+
+
 #include "scorer.h"
 
 #include <cmath>
@@ -14,6 +16,17 @@ Scorer::Scorer(const std::string& name_)
     : name(name_) {
 }
 
+Scorer::Scorer(const Scorer& other)
+    : name(other.name) {
+}
+
+Scorer& Scorer::operator=(const Scorer& other) {
+    if (this != &other) {
+        name = other.name;
+    }
+    return *this;
+}
+
 Scorer::~Scorer() {
 }
 
@@ -22,10 +35,6 @@ double Scorer::score(const Entry& entry, const ScoreContext& ctx) const {
         return 0.0;
     }
     return computeScore(entry, ctx);
-}
-
-const std::string& Scorer::getName() const {
-    return name;
 }
 
 void Scorer::print(std::ostream& os) const {
