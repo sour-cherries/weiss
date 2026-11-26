@@ -3,16 +3,16 @@
 //
 
 #include "entry.h"
+#include "exceptions.h"
 
 #include <algorithm>
 #include <cstdlib>
-#include <stdexcept>
 #include <string>
 
 Entry::Entry(int docID_, int firstPos)
     : docID(docID_), freq(1), pos{firstPos} {
     if (firstPos < 0) {
-        throw std::invalid_argument("Pozitia unui cuvant nu poate fi negativa");
+        throw DataError("pozitia unui cuvant nu poate fi negativa");
     }
 }
 
@@ -160,4 +160,4 @@ std::ostream& operator<<(std::ostream& os, const Entry& entry) {
     }
     os << "]";
     return os;
-}   
+}

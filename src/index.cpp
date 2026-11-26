@@ -3,6 +3,7 @@
 //
 
 #include "index.h"
+#include "exceptions.h"
 
 #include <algorithm>
 #include <cmath>
@@ -78,6 +79,9 @@ const std::vector<Entry>* InvIndex::findEntries(const std::string& term) const {
 }
 
 void InvIndex::addDoc(const Document& doc) {
+    if (findDocById(doc.getId()) != nullptr) {
+        throw IndexError("exista deja un document cu id " + std::to_string(doc.getId()));
+    }
     documents.push_back(doc);
 
     std::vector<std::pair<std::string, int>> tokens = tokenizer.tokenize(doc.getContent());
@@ -273,6 +277,9 @@ std::vector<int> InvIndex::searchQuery(const std::string& expr, int maxDist,
         termsUsed.push_back(used);
 
         if (firstWord) {
+            if (op == "not") {
+                throw CommandError("cautarea nu poate incepe cu not");
+            }
             result = currentDocs;
             firstWord = false;
         } else if (op == "and") {
@@ -298,6 +305,7 @@ std::vector<int> InvIndex::searchQuery(const std::string& expr, int maxDist,
                 }
             }
         }
+        op = "or";
     }
 
     std::sort(result.begin(), result.end());

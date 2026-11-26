@@ -1,7 +1,9 @@
+
 #include "doc.h"
 #include "entry.h"
 #include "tokenizer.h"
 #include "index.h"
+#include "exceptions.h"
 
 #include <algorithm>
 #include <cctype>
@@ -17,6 +19,9 @@
 #include <vector>
 #include <fstream>
 #include <map>
+#include "scorer.h"
+#include <memory>
+
 
 namespace fs = std::filesystem;
 
@@ -49,6 +54,18 @@ bool citesteLinie(const std::string& prompt, std::string& line) {
     return true;
 }
 
+int citesteNumar(const std::string& text) {
+    if (text.empty() || text.size() > 6) {
+        throw CommandError("trebuie un numar intre 0 si 999999, ai scris: " + text);
+    }
+    for (char c : text) {
+        if (std::isdigit(static_cast<unsigned char>(c)) == 0) {
+            throw CommandError("trebuie un numar intre 0 si 999999, ai scris: " + text);
+        }
+    }
+    return std::stoi(text);
+}
+
 std::string construiesteDelimitatori() {
     std::string delim;
     for (int c = 1; c < 128; ++c) {
@@ -72,7 +89,7 @@ std::vector<int> pozitiiTermen(const Tokenizer& tok, const std::string& text, co
 
 Entry construiesteEntry(int docID, const std::vector<int>& pozitii) {
     if (pozitii.empty()) {
-        throw std::invalid_argument("Un Entry are nevoie de cel putin o pozitie");
+        throw DataError("un Entry are nevoie de cel putin o pozitie");
     }
     Entry entry(docID, pozitii.front());
     for (int p : pozitii) {
@@ -309,6 +326,22 @@ void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok) {
     std::cout << "cea mai densa fereastra (10) A incepe la: " << a.getBestWindowStart(10) << "\n";
     std::cout << "densitate relativa A: " << a.getRelativeDensity(total)
               << " | BM25 A: " << a.getBM25(idf, total, avgLen) << "\n";
+    std::cout << "\n~~ Scorer ~~\n";
+    BM25Scorer bm25;
+    std::unique_ptr<Scorer> copieScorer = bm25.clone();
+    ScoreContext ctx(static_cast<int>(idx.getDocCount()), idx.getTermDocFreq(t1), total, avgLen);
+    std::cout << *copieScorer << "\n";
+    std::cout << "scor prin Scorer: " << copieScorer->score(a, ctx) << "\n";
+
+    std::cout << "\n~~ Toate scorerele ~~\n";
+    std::vector<std::unique_ptr<Scorer>> scorere;
+    scorere.push_back(std::make_unique<BM25Scorer>());
+    scorere.push_back(std::make_unique<TfIdfScorer>());
+    scorere.push_back(std::make_unique<FrequencyScorer>());
+    for (const auto& s : scorere) {
+        std::cout << *s << "\n";
+        std::cout << "  scor: " << s->score(a, ctx) << "\n";
+    }
 }
 
 void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Tokenizer& tok, Setari& s) {
@@ -328,12 +361,9 @@ void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Toke
     } else if (cmd == ":phrase" && arg.size() >= 3) {
         afiseazaIds(idx, "fraza '" + arg[1] + " " + arg[2] + "'", idx.searchPhrase(arg[1], arg[2], 1));
     } else if (cmd == ":near" && arg.size() >= 4) {
-        afiseazaIds(idx, "proximitate", idx.searchProximity(arg[1], arg[2], std::stoi(arg[3])));
+        afiseazaIds(idx, "proximitate", idx.searchProximity(arg[1], arg[2], citesteNumar(arg[3])));
     } else if (cmd == ":set" && arg.size() >= 3) {
-        int valoare = std::stoi(arg[2]);
-        if (valoare < 0) {
-            throw std::invalid_argument("Valoarea nu poate fi negativa");
-        }
+        int valoare = citesteNumar(arg[2]);
         if (arg[1] == "typo") {
             s.maxTypo = valoare;
         } else if (arg[1] == "raza") {
@@ -343,11 +373,11 @@ void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Toke
         } else if (arg[1] == "culori") {
             s.culori = (valoare != 0);
         } else {
-            throw std::invalid_argument("Setare necunoscuta: " + arg[1]);
+            throw CommandError("setare necunoscuta: " + arg[1]);
         }
         std::cout << "ok: typo=" << s.maxTypo << " raza=" << s.raza << " pozitii=" << s.maxPozitii << "\n";
     } else {
-        std::cout << "Comanda necunoscuta sau argumente lipsa. Scrie :help\n";
+        throw CommandError("comanda necunoscuta sau argumente lipsa");
     }
 }
 
@@ -364,7 +394,7 @@ std::vector<std::string> detecteazaStopWords(const std::vector<std::string>& cai
                 frecvente[p.first]++;
                 total++;
             }
-        } catch (const std::runtime_error&) {
+        } catch (const FileError&) {
         }
     }
 
@@ -380,7 +410,7 @@ std::vector<std::string> detecteazaStopWords(const std::vector<std::string>& cai
 std::vector<std::string> citesteStopWordsDinFisier(const std::string& cale) {
     std::ifstream fisier(cale);
     if (!fisier.is_open()) {
-        throw std::runtime_error("Nu pot deschide fisierul cu stop words: " + cale);
+        throw FileError("nu pot deschide fisierul cu stop words " + cale);
     }
     std::stringstream buffer;
     buffer << fisier.rdbuf();
@@ -397,6 +427,10 @@ int main(int argc, char* argv[]) {
             argv[1] = nullptr;
         } else if (!citesteLinie("folder cu documente: ", folder)) {
             return EXIT_FAILURE;
+        }
+
+        if (!fs::is_directory(folder)) {
+            throw FileError("nu exista folderul " + folder);
         }
 
         std::vector<std::string> cai;
@@ -423,12 +457,12 @@ int main(int argc, char* argv[]) {
         for (const auto& cale : cai) {
             try {
                 idx.addDoc(Document::fromFile(static_cast<int>(idx.getDocCount()), cale));
-            } catch (const std::runtime_error& e) {
+            } catch (const FileError& e) {
                 std::cerr << "Document sarit: " << e.what() << "\n";
             }
         }
         if (idx.getDocCount() == 0) {
-            throw std::runtime_error("Nu exista niciun document de indexat in: " + folder);
+            throw IndexError("nu exista niciun document de indexat in " + folder);
         }
 
         std::cout << "\nAm indexat " << idx.getDocCount() << " documente.\n" << idx.getIndexSummary() << "\n";
@@ -448,11 +482,18 @@ int main(int argc, char* argv[]) {
                 } else {
                     cautaSiAfiseaza(idx, tok, delimitatori, linie, setari);
                 }
+            } catch (const CommandError& e) {
+                std::cout << e.what() << "\nScrie :help pentru comenzi.\n";
+            } catch (const AppError& e) {
+                std::cout << e.what() << "\n";
             } catch (const std::exception& e) {
                 std::cout << "Eroare: " << e.what() << "\n";
             }
             std::cout << "\n";
         }
+    } catch (const AppError& e) {
+        std::cerr << e.what() << "\n";
+        return EXIT_FAILURE;
     } catch (const std::exception& e) {
         std::cerr << "Eroare: " << e.what() << "\n";
         return EXIT_FAILURE;

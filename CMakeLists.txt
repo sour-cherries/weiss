@@ -73,6 +73,8 @@ target_sources(${MAIN_LIBRARY_NAME}
         src/entry.cpp
         src/tokenizer.cpp
         src/index.cpp
+        src/scorer.cpp
+        src/exceptions.cpp
 )
 
 # NOTE: Add all defined targets (e.g. executables, libraries, etc. )

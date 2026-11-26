@@ -3,13 +3,13 @@
 //
 
 #include "doc.h"
+#include "exceptions.h"
 
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 
 Document::Document(int id_, const std::string& title_, const std::string& path_, const std::string& content_)
     : id(id_), title(title_), path(path_), content(content_) {
@@ -60,7 +60,7 @@ std::size_t Document::findIgnoreCase(const std::string& term) const {
 Document Document::fromFile(int id, const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        throw std::runtime_error("Nu pot deschide fisierul: " + path);
+        throw FileError("nu pot deschide fisierul " + path);
     }
 
     std::stringstream buffer;
@@ -72,8 +72,8 @@ Document Document::fromFile(int id, const std::string& path) {
         title = title.substr(slash + 1);
     }
     std::size_t dot = title.find_last_of('.');
-    if (dot != std::string::npos) {
-        title = title.substr(dot);
+    if (dot != std::string::npos && dot > 0) {
+        title = title.substr(0, dot);
     }
 
     return Document(id, title, path, buffer.str());
