@@ -3,6 +3,7 @@
 //
 
 #include "scorer.h"
+
 #include <cmath>
 
 ScoreContext::ScoreContext(int totalDocs_, int docsWithTerm_, int docLen_, double avgDocLen_)
@@ -116,4 +117,22 @@ std::unique_ptr<Scorer> FrequencyScorer::clone() const {
 
 void FrequencyScorer::setLimit(int newLimit) {
     limit = newLimit;
+}
+
+PositionScorer::PositionScorer()
+    : Scorer("pozitie") {
+}
+
+double PositionScorer::computeScore(const Entry& entry, const ScoreContext& ctx) const {
+    double idf = std::log1p(static_cast<double>(ctx.totalDocs) / ctx.docsWithTerm);
+    double early = 1.0 - static_cast<double>(entry.getFirstPos()) / ctx.docLen;
+    return idf * early;
+}
+
+void PositionScorer::printDetails(std::ostream& os) const {
+    os << "cu cat cuvantul apare mai la inceput, cu atat scorul e mai mare";
+}
+
+std::unique_ptr<Scorer> PositionScorer::clone() const {
+    return std::make_unique<PositionScorer>(*this);
 }

@@ -118,6 +118,7 @@ std::vector<std::unique_ptr<Scorer>> construiesteScorere() {
     scorere.push_back(std::make_unique<BM25Scorer>());
     scorere.push_back(std::make_unique<TfIdfScorer>());
     scorere.push_back(std::make_unique<FrequencyScorer>());
+    scorere.push_back(std::make_unique<PositionScorer>());
     return scorere;
 }
 

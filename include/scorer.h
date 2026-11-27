@@ -2,7 +2,6 @@
 // Created by patri on 24.11.2026.
 //
 
-
 #ifndef OOP_SCORER_H
 #define OOP_SCORER_H
 
@@ -79,6 +78,17 @@ public:
 
     std::unique_ptr<Scorer> clone() const override;
     void setLimit(int newLimit);
+};
+
+class PositionScorer : public Scorer {
+private:
+    double computeScore(const Entry& entry, const ScoreContext& ctx) const override;
+    void printDetails(std::ostream& os) const override;
+
+public:
+    PositionScorer();
+
+    std::unique_ptr<Scorer> clone() const override;
 };
 
 #endif //OOP_SCORER_H
