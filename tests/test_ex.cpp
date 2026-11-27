@@ -10,6 +10,7 @@
 #include "entry.h"
 #include "tokenizer.h"
 #include "index.h"
+#include "ranker.h"
 
 int main() {
     Document d1(1, "Curs POO", "assets/doc1.txt", "Programare orientata pe obiecte in C++.\nLinia doi cu programare.");
@@ -127,7 +128,9 @@ int main() {
     auto resProx = idx.searchProximity("programare", "c++", 6);
     assert(resProx.size() == 1 && resProx[0] == 1);
 
-    auto resRanked = idx.searchRanked("programare");
+    BM25Scorer bm25Test;
+    Ranker rankerTest(bm25Test);
+    auto resRanked = rankerTest.rank(idx, {"programare"});
     assert(!resRanked.empty() && resRanked[0].first == 1 && resRanked[0].second > 0.0);
 
     assert(!idx.locateTerm(1, "programare", 5, 2).empty());
