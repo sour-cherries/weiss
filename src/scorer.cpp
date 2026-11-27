@@ -3,6 +3,7 @@
 //
 
 #include "scorer.h"
+#include "exceptions.h"
 
 #include <cmath>
 
@@ -135,4 +136,37 @@ void PositionScorer::printDetails(std::ostream& os) const {
 
 std::unique_ptr<Scorer> PositionScorer::clone() const {
     return std::make_unique<PositionScorer>(*this);
+}
+
+DensityScorer::DensityScorer(int window_)
+    : Scorer("densitate"), window(window_) {
+    if (window <= 0) {
+        throw DataError("fereastra pentru densitate trebuie sa fie pozitiva, ai dat " + std::to_string(window));
+    }
+}
+
+double DensityScorer::computeScore(const Entry& entry, const ScoreContext& ctx) const {
+    int start = entry.getBestWindowStart(window);
+    if (start < 0) {
+        return 0.0;
+    }
+
+    int inFereastra = 0;
+    for (int p : entry.getPos()) {
+        if (p >= start && p < start + window) {
+            inFereastra++;
+        }
+    }
+
+    double idf = std::log1p(static_cast<double>(ctx.totalDocs) / ctx.docsWithTerm);
+    double densitate = static_cast<double>(inFereastra) / window;
+    return idf * densitate;
+}
+
+void DensityScorer::printDetails(std::ostream& os) const {
+    os << "cate aparitii are cea mai densa zona de " << window << " cuvinte, inmultit cu raritatea";
+}
+
+std::unique_ptr<Scorer> DensityScorer::clone() const {
+    return std::make_unique<DensityScorer>(*this);
 }

@@ -1,3 +1,6 @@
+//
+// Created by patri on 24.11.2026.
+//
 
 #ifndef OOP_SCORER_H
 #define OOP_SCORER_H
@@ -86,6 +89,19 @@ private:
 
 public:
     PositionScorer();
+
+    std::unique_ptr<Scorer> clone() const override;
+};
+
+class DensityScorer : public Scorer {
+private:
+    int window;
+
+    double computeScore(const Entry& entry, const ScoreContext& ctx) const override;
+    void printDetails(std::ostream& os) const override;
+
+public:
+    explicit DensityScorer(int window);
 
     std::unique_ptr<Scorer> clone() const override;
 };

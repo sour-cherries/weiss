@@ -22,15 +22,7 @@
 #include "scorer.h"
 #include <memory>
 
-
 namespace fs = std::filesystem;
-
-const int NUMAR_MAXIM = 999999;
-const int ASCII_MAXIM = 128;
-const int DISTANTA_FRAZA = 1;
-const std::size_t TERMENI_DEMO = 2;
-const std::string CULOARE_START = "\033[1;33m";
-const std::string CULOARE_STOP = "\033[0m";
 
 struct Setari {
     int maxTypo = 2;
@@ -43,6 +35,8 @@ struct Setari {
     std::size_t lungimeMostra = 100;
     int fereastraDemo = 10;
     int distantaDemo = 5;
+    int distantaFraza = 1;
+    int fereastraDensitate = 10;
 };
 
 std::vector<std::string> imparteCuvinte(const std::string& line) {
@@ -67,8 +61,9 @@ bool citesteLinie(const std::string& prompt, std::string& line) {
 }
 
 int citesteNumar(const std::string& text) {
-    const std::string mesaj = "trebuie un numar intre 0 si " + std::to_string(NUMAR_MAXIM) + ", ai scris: " + text;
-    if (text.empty() || text.size() > std::to_string(NUMAR_MAXIM).size()) {
+    const int numarMaxim = 999999;
+    const std::string mesaj = "trebuie un numar intre 0 si " + std::to_string(numarMaxim) + ", ai scris: " + text;
+    if (text.empty() || text.size() > std::to_string(numarMaxim).size()) {
         throw CommandError(mesaj);
     }
     for (char c : text) {
@@ -77,15 +72,16 @@ int citesteNumar(const std::string& text) {
         }
     }
     int numar = std::stoi(text);
-    if (numar > NUMAR_MAXIM) {
+    if (numar > numarMaxim) {
         throw CommandError(mesaj);
     }
     return numar;
 }
 
 std::string construiesteDelimitatori() {
+    const int asciiMaxim = 128;
     std::string delim;
-    for (int c = 1; c < ASCII_MAXIM; ++c) {
+    for (int c = 1; c < asciiMaxim; ++c) {
         if (std::ispunct(c) != 0) {
             delim.push_back(static_cast<char>(c));
         }
@@ -130,12 +126,13 @@ void afiseazaCuvinte(const std::string& eticheta, const std::vector<std::string>
     std::cout << eticheta << " (" << cuvinte.size() << "): " << Tokenizer::joinTokens(cuvinte, ", ") << "\n";
 }
 
-std::vector<std::unique_ptr<Scorer>> construiesteScorere() {
+std::vector<std::unique_ptr<Scorer>> construiesteScorere(const Setari& s) {
     std::vector<std::unique_ptr<Scorer>> scorere;
     scorere.push_back(std::make_unique<BM25Scorer>());
     scorere.push_back(std::make_unique<TfIdfScorer>());
     scorere.push_back(std::make_unique<FrequencyScorer>());
     scorere.push_back(std::make_unique<PositionScorer>());
+    scorere.push_back(std::make_unique<DensityScorer>(s.fereastraDensitate));
     return scorere;
 }
 
@@ -241,6 +238,9 @@ std::string construiesteBara(const std::vector<Aparitie>& aparitii, int totalCuv
 }
 
 std::string construiesteContext(const std::string& text, const Aparitie& a, std::size_t raza, bool culori) {
+    const std::string culoareStart = "\033[1;33m";
+    const std::string culoareStop = "\033[0m";
+
     std::size_t start = (a.start > a.inceputLinie + raza) ? a.start - raza : a.inceputLinie;
     std::size_t end = std::min(a.sfarsitLinie, a.sfarsit + raza);
 
@@ -253,7 +253,7 @@ std::string construiesteContext(const std::string& text, const Aparitie& a, std:
 
     std::string rezultat = (start > a.inceputLinie) ? "..." : "";
     rezultat += inainte;
-    rezultat += culori ? CULOARE_START + cuvant + CULOARE_STOP : "[" + cuvant + "]";
+    rezultat += culori ? culoareStart + cuvant + culoareStop : "[" + cuvant + "]";
     rezultat += dupa;
     if (end < a.sfarsitLinie) {
         rezultat += "...";
@@ -361,6 +361,8 @@ void afiseazaStatistici(const InvIndex& idx, const Setari& s) {
 
 void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok, const Setari& s,
                  const std::vector<std::unique_ptr<Scorer>>& scorere, const Ranker& ranker) {
+    const std::size_t termeniDemo = 2;
+
     const Document& primul = idx.getDocuments().front();
     Document copie(primul);
     Document atribuit = idx.getDocuments().back();
@@ -369,7 +371,7 @@ void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok, const Setari& s,
     std::cout << "calea: " << copie.getPath() << " | id: " << copie.getId()
               << " | titlu: " << copie.getTitle() << " | lungime: " << copie.getContent().size() << "\n";
 
-    std::vector<std::string> top = idx.getTopTermsInDoc(primul.getId(), TERMENI_DEMO);
+    std::vector<std::string> top = idx.getTopTermsInDoc(primul.getId(), termeniDemo);
     if (top.empty()) {
         std::cout << "Documentul nu are termeni indexati.\n";
         return;
@@ -393,7 +395,7 @@ void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok, const Setari& s,
     std::cout << "docID=" << a.getDocID() << " freq=" << a.getFreq() << " prima poz=" << a.getFirstPos()
               << " nr pozitii=" << a.getPos().size() << "\n";
     std::cout << "A are pozitia primei pozitii din B? " << a.hasPos(b.getFirstPos()) << "\n";
-    std::cout << "inceputuri de fraza A->B: " << a.getPhraseStarts(b, DISTANTA_FRAZA).size() << "\n";
+    std::cout << "inceputuri de fraza A->B: " << a.getPhraseStarts(b, s.distantaFraza).size() << "\n";
     std::cout << "A urmat de B in " << s.distantaDemo << " cuvinte? " << a.isFollowedBy(b, s.distantaDemo) << "\n";
     std::cout << "distanta minima A-B: " << a.getMinDistTo(b) << "\n";
     std::cout << "cea mai densa fereastra (" << s.fereastraDemo << ") A incepe la: "
@@ -456,7 +458,7 @@ void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Toke
     } else if (cmd == ":complete" && arg.size() >= 2) {
         afiseazaCuvinte("autocomplete '" + arg[1] + "'", idx.autocomplete(arg[1]));
     } else if (cmd == ":phrase" && arg.size() >= 3) {
-        afiseazaIds(idx, "fraza '" + arg[1] + " " + arg[2] + "'", idx.searchPhrase(arg[1], arg[2], DISTANTA_FRAZA));
+        afiseazaIds(idx, "fraza '" + arg[1] + " " + arg[2] + "'", idx.searchPhrase(arg[1], arg[2], s.distantaFraza));
     } else if (cmd == ":near" && arg.size() >= 4) {
         afiseazaIds(idx, "proximitate", idx.searchProximity(arg[1], arg[2], citesteNumar(arg[3])));
     } else if (cmd == ":set" && arg.size() >= 3 && arg[1] == "scorer") {
@@ -557,7 +559,7 @@ int main(int argc, char* argv[]) {
         Tokenizer tok(delimitatori, true, stopWords);
 
         InvIndex idx(tok);
-        const std::vector<std::unique_ptr<Scorer>> scorere = construiesteScorere();
+        const std::vector<std::unique_ptr<Scorer>> scorere = construiesteScorere(setari);
         Ranker ranker(*scorere.front());
         for (const auto& cale : cai) {
             try {
