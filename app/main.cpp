@@ -25,12 +25,24 @@
 
 namespace fs = std::filesystem;
 
+const int NUMAR_MAXIM = 999999;
+const int ASCII_MAXIM = 128;
+const int DISTANTA_FRAZA = 1;
+const std::size_t TERMENI_DEMO = 2;
+const std::string CULOARE_START = "\033[1;33m";
+const std::string CULOARE_STOP = "\033[0m";
+
 struct Setari {
     int maxTypo = 2;
     std::size_t raza = 30;
     std::size_t maxPozitii = 5;
     double pragStopWords = 0.01;
     bool culori = true;
+    std::size_t latimeBara = 40;
+    std::size_t topTermeni = 5;
+    std::size_t lungimeMostra = 100;
+    int fereastraDemo = 10;
+    int distantaDemo = 5;
 };
 
 std::vector<std::string> imparteCuvinte(const std::string& line) {
@@ -55,20 +67,25 @@ bool citesteLinie(const std::string& prompt, std::string& line) {
 }
 
 int citesteNumar(const std::string& text) {
-    if (text.empty() || text.size() > 6) {
-        throw CommandError("trebuie un numar intre 0 si 999999, ai scris: " + text);
+    const std::string mesaj = "trebuie un numar intre 0 si " + std::to_string(NUMAR_MAXIM) + ", ai scris: " + text;
+    if (text.empty() || text.size() > std::to_string(NUMAR_MAXIM).size()) {
+        throw CommandError(mesaj);
     }
     for (char c : text) {
         if (std::isdigit(static_cast<unsigned char>(c)) == 0) {
-            throw CommandError("trebuie un numar intre 0 si 999999, ai scris: " + text);
+            throw CommandError(mesaj);
         }
     }
-    return std::stoi(text);
+    int numar = std::stoi(text);
+    if (numar > NUMAR_MAXIM) {
+        throw CommandError(mesaj);
+    }
+    return numar;
 }
 
 std::string construiesteDelimitatori() {
     std::string delim;
-    for (int c = 1; c < 128; ++c) {
+    for (int c = 1; c < ASCII_MAXIM; ++c) {
         if (std::ispunct(c) != 0) {
             delim.push_back(static_cast<char>(c));
         }
@@ -236,7 +253,7 @@ std::string construiesteContext(const std::string& text, const Aparitie& a, std:
 
     std::string rezultat = (start > a.inceputLinie) ? "..." : "";
     rezultat += inainte;
-    rezultat += culori ? "\033[1;33m" + cuvant + "\033[0m" : "[" + cuvant + "]";
+    rezultat += culori ? CULOARE_START + cuvant + CULOARE_STOP : "[" + cuvant + "]";
     rezultat += dupa;
     if (end < a.sfarsitLinie) {
         rezultat += "...";
@@ -260,7 +277,7 @@ void afiseazaRezultat(const InvIndex& idx, const Tokenizer& tok, const std::stri
             continue;
         }
         std::cout << "  " << termen << " - " << aparitii.size() << " aparitii\n";
-        std::cout << "    " << construiesteBara(aparitii, total, 40) << "\n";
+        std::cout << "    " << construiesteBara(aparitii, total, s.latimeBara) << "\n";
 
         std::size_t limita = std::min(aparitii.size(), s.maxPozitii);
         for (std::size_t i = 0; i < limita; ++i) {
@@ -331,18 +348,18 @@ void comparaScorere(const InvIndex& idx, const std::vector<std::unique_ptr<Score
     }
 }
 
-void afiseazaStatistici(const InvIndex& idx) {
+void afiseazaStatistici(const InvIndex& idx, const Setari& s) {
     std::cout << idx.getIndexSummary() << "\n";
     std::cout << "Scoruri calculate pana acum: " << Scorer::getComputedScores() << "\n";
     for (const auto& doc : idx.getDocuments()) {
         std::cout << "doc " << doc.getId() << " [" << doc.getTitle() << "]: "
                   << idx.getDocUniqueTerms(doc.getId()) << " termeni unici, "
                   << idx.getDocTotalWords(doc.getId()) << " cuvinte, top: "
-                  << Tokenizer::joinTokens(idx.getTopTermsInDoc(doc.getId(), 5), ", ") << "\n";
+                  << Tokenizer::joinTokens(idx.getTopTermsInDoc(doc.getId(), s.topTermeni), ", ") << "\n";
     }
 }
 
-void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok,
+void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok, const Setari& s,
                  const std::vector<std::unique_ptr<Scorer>>& scorere, const Ranker& ranker) {
     const Document& primul = idx.getDocuments().front();
     Document copie(primul);
@@ -352,7 +369,7 @@ void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok,
     std::cout << "calea: " << copie.getPath() << " | id: " << copie.getId()
               << " | titlu: " << copie.getTitle() << " | lungime: " << copie.getContent().size() << "\n";
 
-    std::vector<std::string> top = idx.getTopTermsInDoc(primul.getId(), 2);
+    std::vector<std::string> top = idx.getTopTermsInDoc(primul.getId(), TERMENI_DEMO);
     if (top.empty()) {
         std::cout << "Documentul nu are termeni indexati.\n";
         return;
@@ -360,10 +377,10 @@ void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok,
     const std::string& t1 = top.front();
     const std::string& t2 = top.back();
     std::cout << "'" << t1 << "': " << copie.countOccurrences(t1) << " aparitii, linia "
-              << copie.getLineOf(t1) << ", snippet: " << copie.getSnippet(t1, 30) << "\n\n";
+              << copie.getLineOf(t1) << ", snippet: " << copie.getSnippet(t1, s.raza) << "\n\n";
 
     std::cout << "~~ Tokenizer ~~\n" << tok << "\n"
-              << tok.analyzeSample(copie.getContent().substr(0, 100), " ") << "\n"
+              << tok.analyzeSample(copie.getContent().substr(0, s.lungimeMostra), " ") << "\n"
               << "'" << t1 << "' stop word? " << tok.isStopWord(t1) << "\n\n";
 
     Entry a = construiesteEntry(primul.getId(), pozitiiTermen(tok, primul.getContent(), t1));
@@ -376,17 +393,18 @@ void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok,
     std::cout << "docID=" << a.getDocID() << " freq=" << a.getFreq() << " prima poz=" << a.getFirstPos()
               << " nr pozitii=" << a.getPos().size() << "\n";
     std::cout << "A are pozitia primei pozitii din B? " << a.hasPos(b.getFirstPos()) << "\n";
-    std::cout << "inceputuri de fraza A->B: " << a.getPhraseStarts(b, 1).size() << "\n";
-    std::cout << "A urmat de B in 5 cuvinte? " << a.isFollowedBy(b, 5) << "\n";
+    std::cout << "inceputuri de fraza A->B: " << a.getPhraseStarts(b, DISTANTA_FRAZA).size() << "\n";
+    std::cout << "A urmat de B in " << s.distantaDemo << " cuvinte? " << a.isFollowedBy(b, s.distantaDemo) << "\n";
     std::cout << "distanta minima A-B: " << a.getMinDistTo(b) << "\n";
-    std::cout << "cea mai densa fereastra (10) A incepe la: " << a.getBestWindowStart(10) << "\n";
+    std::cout << "cea mai densa fereastra (" << s.fereastraDemo << ") A incepe la: "
+              << a.getBestWindowStart(s.fereastraDemo) << "\n";
     std::cout << "densitate relativa A: " << a.getRelativeDensity(total)
               << " | BM25 A: " << a.getBM25(idf, total, avgLen) << "\n";
     ScoreContext ctx(static_cast<int>(idx.getDocCount()), idx.getTermDocFreq(t1), total, avgLen);
     std::cout << "\n~~ Toate scorerele ~~\n";
-    for (const auto& s : scorere) {
-        std::cout << *s << "\n";
-        std::cout << "  scor: " << s->score(a, ctx) << "\n";
+    for (const auto& scorer : scorere) {
+        std::cout << *scorer << "\n";
+        std::cout << "  scor: " << scorer->score(a, ctx) << "\n";
     }
 
     std::cout << "\n~~ Ranker ~~\n";
@@ -416,11 +434,11 @@ void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Toke
     if (cmd == ":help") {
         afiseazaAjutor();
     } else if (cmd == ":stats") {
-        afiseazaStatistici(idx);
+        afiseazaStatistici(idx, s);
     } else if (cmd == ":index") {
         std::cout << idx << "\n";
     } else if (cmd == ":demo") {
-        ruleazaDemo(idx, tok, scorere, ranker);
+        ruleazaDemo(idx, tok, s, scorere, ranker);
     } else if (cmd == ":history") {
         afiseazaIstoric(istoric);
     } else if (cmd == ":again" && arg.size() >= 2) {
@@ -438,7 +456,7 @@ void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Toke
     } else if (cmd == ":complete" && arg.size() >= 2) {
         afiseazaCuvinte("autocomplete '" + arg[1] + "'", idx.autocomplete(arg[1]));
     } else if (cmd == ":phrase" && arg.size() >= 3) {
-        afiseazaIds(idx, "fraza '" + arg[1] + " " + arg[2] + "'", idx.searchPhrase(arg[1], arg[2], 1));
+        afiseazaIds(idx, "fraza '" + arg[1] + " " + arg[2] + "'", idx.searchPhrase(arg[1], arg[2], DISTANTA_FRAZA));
     } else if (cmd == ":near" && arg.size() >= 4) {
         afiseazaIds(idx, "proximitate", idx.searchProximity(arg[1], arg[2], citesteNumar(arg[3])));
     } else if (cmd == ":set" && arg.size() >= 3 && arg[1] == "scorer") {

@@ -17,6 +17,7 @@ private:
 
     static constexpr double K1 = 1.2;
     static constexpr double B = 0.75;
+    static constexpr std::size_t MAX_POZ_AFISATE = 5;
 
     std::size_t firstIndexNotBefore(int p) const;
 

@@ -151,7 +151,7 @@ double Entry::getBM25(double idf, int docLen, double avgDocLen) const {
 
 std::ostream& operator<<(std::ostream& os, const Entry& entry) {
     os << "[DocID:" << entry.docID << " ~ Freq: " << entry.freq << " ~ Pos:";
-    std::size_t limit = std::min<std::size_t>(entry.pos.size(), 5);
+    std::size_t limit = std::min(entry.pos.size(), Entry::MAX_POZ_AFISATE);
     for (std::size_t i = 0; i < limit; ++i) {
         os << " " << entry.pos[i];
     }

@@ -1,6 +1,3 @@
-//
-// Created by patri on 24.11.2026.
-//
 
 #ifndef OOP_SCORER_H
 #define OOP_SCORER_H
@@ -28,10 +25,12 @@ private:
     virtual double computeScore(const Entry& entry, const ScoreContext& ctx) const = 0;
     virtual void printDetails(std::ostream& os) const = 0;
 
-public:
-    explicit Scorer(const std::string& name);
+protected:
     Scorer(const Scorer& other);
     Scorer& operator=(const Scorer& other);
+
+public:
+    explicit Scorer(const std::string& name);
     virtual ~Scorer();
 
     virtual std::unique_ptr<Scorer> clone() const = 0;
