@@ -15,56 +15,27 @@ __        __ _____ ___ ____  ____
                           \
 ```
 
-Un motor de căutare în documente text, scris în C++ pentru proiectul de OOP.
-Îi dai un folder cu fișiere, el le indexează, iar tu cauți cuvinte, fraze sau combinații cu `and` / `or` / `not`. Greșelile de scriere se corectează automat.
+Weiss e un motor de căutare în documente text, scris în C++ pentru cursul de OOP. Îi dai un folder cu fișiere, le indexează, iar tu cauți cuvinte, fraze sau combinații cu `and` / `or` / `not`. Greșelile de scriere se corectează automat, iar rezultatele sunt ordonate după relevanță.
 
-## Build
+Structura proiectului e din template (de asta are CMake, AGENTS.md, GitHub Actions și licența AGPL).
 
-Ai nevoie de:
+Încă nu are interfață în terminal, doar linie de comandă. Indexul se face de la zero la fiecare pornire, iar `and` / `or` / `not` nu merg cu paranteze.
 
-- CMake 3.28 sau mai nou
-- un compilator cu suport C++23 (GCC 13+, Clang 17+ sau MSVC 2022)
+## Build și rulare
 
-Nu are dependențe externe, folosește doar biblioteca standard.
+Ai nevoie de CMake 3.28+ și un compilator cu C++23.
 
 ```bash
-git clone <link-repo>
-cd <nume-repo>
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-```
-
-Rezultă biblioteca `liboop.a` (clasele din `src/`) și executabilul `oop_main` (din `app/main.cpp`).
-
-Opțiuni utile:
-
-```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug     # pentru depanare
-cmake -B build -DUSE_ASAN=ON                # AddressSanitizer
-cmake --build build --parallel              # compilare mai rapidă
-```
-
-Pe Windows (Visual Studio), executabilul e în `build\Release\oop_main.exe`.
-
-## Rulare
-
-```bash
-./build/oop_main <folder_cu_documente> [fisier_stop_words]
-```
-
-- Dacă nu dai folderul ca argument, programul te întreabă de el.
-- Dacă nu dai fișier de stop words, acestea se detectează automat (cuvintele care apar foarte des).
-
-Exemple de date de intrare sunt în `tastatura.txt`:
-
-```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug --parallel 6
 ./build/oop_main assets < tastatura.txt
 ```
 
-## Exemple de căutare
+Fără `< tastatura.txt` poți scrie căutările tu. Pentru teste: `ctest --test-dir build -C Debug --output-on-failure`.
+
+## Exemple
 
 ```
-cauta> algorithm
 cauta> algorithm and data
 cauta> data not java
 cauta> algoritm            <- greseala, se corecteaza singur
@@ -72,33 +43,34 @@ cauta> algoritm            <- greseala, se corecteaza singur
 
 ## Comenzi
 
-| Comandă | Ce face |
-|---|---|
-| `:help` | afișează ajutorul |
-| `:stats` | statistici despre index și documente |
-| `:complete <prefix>` | autocomplete |
-| `:phrase <w1> <w2>` | caută o frază (w1 urmat direct de w2) |
-| `:near <w1> <w2> <n>` | w1 și w2 la cel mult n cuvinte distanță |
-| `:set typo\|raza\|pozitii\|culori <valoare>` | schimbă setările |
-| `:index` | afișează tot indexul |
-| `:demo` | demonstrație pentru clasele proiectului |
-| `:quit` | ieșire |
+- `:help` lista de comenzi
+- `:stats` statistici despre index și documente
+- `:index` afișează tot indexul
+- `:demo` demonstrație pentru clasele proiectului
+- `:complete <prefix>` completează un prefix cu cuvinte din index
+- `:phrase <w1> <w2>` w1 urmat direct de w2
+- `:near <w1> <w2> <n>` w1 și w2 la cel mult n cuvinte distanță
+- `:scorers` formulele de scor (`bm25`, `tfidf`, `freq`, `pozitie`, `densitate`)
+- `:set scorer <nume>` schimbă formula de scor
+- `:compare <cuvinte>` compară clasamentul făcut de toate formulele
+- `:set typo|raza|pozitii|culori|limita <valoare>` schimbă setările
+- `:history` căutările de până acum
+- `:again <nr>` repetă o căutare din istoric
+- `:quit` ieșire
 
+## Resurse
 
-## Resurse folosite
-
-- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/) (Manning, Raghavan, Schütze): inverted index, tf-idf, scoring
-- [learncpp.com](https://www.learncpp.com/): moștenire, funcții virtuale, smart pointers, excepții
-- [cppreference.com](https://en.cppreference.com/): documentația STL
-- [CMake Documentation](https://cmake.org/cmake/help/latest/): configurarea build-ului
-- [Refactoring Guru](https://refactoring.guru/design-patterns): design patterns
-- [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines): clase și ierarhii
-- [Levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance): corectarea greșelilor de scriere
-- [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25): formula de scor folosită la ranking
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/): indexul inversat și tf-idf
+- [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25): formula de scor din `Entry::getBM25`
+- [Levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance): corectarea greșelilor, în `src/index.cpp`
+- [learncpp.com](https://www.learncpp.com/)
+- [cppreference.com](https://en.cppreference.com/)
+- [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines)
+- [Refactoring Guru](https://refactoring.guru/design-patterns)
+- [CMake Documentation](https://cmake.org/cmake/help/latest/)
 
 ## Licență
 
 The project is licensed under [AGPLv3](https://github.com/sour-cherries/weiss/blob/main/LICENSE).
 
-The [template repository](https://github.com/mcmarius/oop-template) itself is licensed under [Unlicense](https://github.com/sour-cherries/weiss/blob/main/LICENSE.template).
-
+The [template repository](https://github.com/mcmarius/oop-template) itself is licensed under [Unlicense](https://github.com/sour-cherries/weiss/blob/main/LICENSE.template)./sour-cherries/weiss/blob/main/LICENSE.template).
