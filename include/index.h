@@ -2,7 +2,6 @@
 // Created by patri on 29.10.2026.
 //
 
-
 #ifndef OOP_INDEX_H
 #define OOP_INDEX_H
 
@@ -13,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <utility>
 
 class InvIndex {
 private:
@@ -24,13 +24,13 @@ private:
     static int sumFreq(const std::vector<Entry>& entries);
     static const Entry* findEntryInDoc(const std::vector<Entry>& entries, int docID);
 
-    const Document* findDocById(int docID) const;
 
 public:
     explicit InvIndex(const Tokenizer& tok);
 
     void addDoc(const Document& doc);
 
+    const Document* findDocById(int docID) const;
     const std::vector<Entry>* findEntries(const std::string& term) const;
 
     std::vector<int> searchExact(const std::string& term) const;

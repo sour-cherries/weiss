@@ -3,12 +3,13 @@
 //
 
 #include "scorer.h"
-
 #include <cmath>
 
 ScoreContext::ScoreContext(int totalDocs_, int docsWithTerm_, int docLen_, double avgDocLen_)
     : totalDocs(totalDocs_), docsWithTerm(docsWithTerm_), docLen(docLen_), avgDocLen(avgDocLen_) {
 }
+
+int Scorer::computedScores = 0;
 
 Scorer::Scorer(const std::string& name_)
     : name(name_) {
@@ -32,7 +33,12 @@ double Scorer::score(const Entry& entry, const ScoreContext& ctx) const {
     if (ctx.totalDocs <= 0 || ctx.docsWithTerm <= 0 || ctx.docLen <= 0) {
         return 0.0;
     }
+    computedScores++;
     return computeScore(entry, ctx);
+}
+
+int Scorer::getComputedScores() {
+    return computedScores;
 }
 
 bool Scorer::hasName(const std::string& wanted) const {
@@ -86,17 +92,28 @@ std::unique_ptr<Scorer> TfIdfScorer::clone() const {
 }
 
 FrequencyScorer::FrequencyScorer()
-    : Scorer("freq") {
+    : Scorer("freq"), limit(0) {
 }
 
 double FrequencyScorer::computeScore(const Entry& entry, const ScoreContext&) const {
-    return static_cast<double>(entry.getFreq());
+    int freq = entry.getFreq();
+    if (limit > 0 && freq > limit) {
+        freq = limit;
+    }
+    return static_cast<double>(freq);
 }
 
 void FrequencyScorer::printDetails(std::ostream& os) const {
     os << "doar de cate ori apare cuvantul in document";
+    if (limit > 0) {
+        os << ", maxim " << limit << " aparitii numarate";
+    }
 }
 
 std::unique_ptr<Scorer> FrequencyScorer::clone() const {
     return std::make_unique<FrequencyScorer>(*this);
+}
+
+void FrequencyScorer::setLimit(int newLimit) {
+    limit = newLimit;
 }

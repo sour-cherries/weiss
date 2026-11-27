@@ -3,6 +3,7 @@
 //
 
 #include "ranker.h"
+#include "exceptions.h"
 
 #include <algorithm>
 #include <map>
@@ -25,6 +26,14 @@ Ranker::~Ranker() {
 
 void swap(Ranker& first, Ranker& second) {
     std::swap(first.scorer, second.scorer);
+}
+
+void Ranker::setFrequencyLimit(int limit) {
+    FrequencyScorer* freqScorer = dynamic_cast<FrequencyScorer*>(scorer.get());
+    if (freqScorer == nullptr) {
+        throw CommandError("limita merge doar cu scorerul de frecventa (vezi :scorers)");
+    }
+    freqScorer->setLimit(limit);
 }
 
 std::vector<std::pair<int, double>> Ranker::rank(const InvIndex& idx,

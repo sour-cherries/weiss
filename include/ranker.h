@@ -26,6 +26,7 @@ public:
 
     friend void swap(Ranker& first, Ranker& second);
 
+    void setFrequencyLimit(int limit);
     std::vector<std::pair<int, double>> rank(const InvIndex& idx, const std::vector<std::string>& terms) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Ranker& ranker);

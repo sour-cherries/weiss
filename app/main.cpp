@@ -101,10 +101,9 @@ Entry construiesteEntry(int docID, const std::vector<int>& pozitii) {
 void afiseazaIds(const InvIndex& idx, const std::string& eticheta, const std::vector<int>& ids) {
     std::cout << eticheta << " (" << ids.size() << "):";
     for (int id : ids) {
-        for (const auto& doc : idx.getDocuments()) {
-            if (doc.getId() == id) {
-                std::cout << " [" << doc.getTitle() << "]";
-            }
+        const Document* doc = idx.findDocById(id);
+        if (doc != nullptr) {
+            std::cout << " [" << doc->getTitle() << "]";
         }
     }
     std::cout << "\n";
@@ -150,6 +149,9 @@ void afiseazaAjutor() {
               << "  :scorers               formulele de scor disponibile\n"
               << "  :set scorer <nume>     schimba formula de scor\n"
               << "  :compare <cuvinte>     compara clasamentul cu toate formulele\n"
+              << "  :set limita <n>        maxim n aparitii numarate (doar la frecventa, 0 = fara limita)\n"
+              << "  :history               cautarile de pana acum\n"
+              << "  :again <nr>            repeta o cautare din istoric\n"
               << "  :index                 afiseaza tot indexul\n"
               << "  :demo                  demonstratie pentru Document / Entry / Tokenizer\n"
               << "  :quit                  iesire\n\n";
@@ -243,35 +245,34 @@ std::string construiesteContext(const std::string& text, const Aparitie& a, std:
 
 void afiseazaRezultat(const InvIndex& idx, const Tokenizer& tok, const std::string& delimitatori,
                       int docID, double scor, const std::vector<std::string>& termeni, const Setari& s) {
-    for (const auto& doc : idx.getDocuments()) {
-        if (doc.getId() != docID) {
+    const Document* doc = idx.findDocById(docID);
+    if (doc == nullptr) {
+        return;
+    }
+    const int total = idx.getDocTotalWords(docID);
+    std::cout << "[" << doc->getTitle() << "]  " << doc->getPath()
+              << "  (scor " << scor << ", " << total << " cuvinte)\n";
+
+    for (const auto& termen : termeni) {
+        std::vector<Aparitie> aparitii = gasesteAparitii(tok, doc->getContent(), delimitatori, termen);
+        if (aparitii.empty()) {
             continue;
         }
-        const int total = idx.getDocTotalWords(docID);
-        std::cout << "[" << doc.getTitle() << "]  " << doc.getPath()
-                  << "  (scor " << scor << ", " << total << " cuvinte)\n";
+        std::cout << "  " << termen << " - " << aparitii.size() << " aparitii\n";
+        std::cout << "    " << construiesteBara(aparitii, total, 40) << "\n";
 
-        for (const auto& termen : termeni) {
-            std::vector<Aparitie> aparitii = gasesteAparitii(tok, doc.getContent(), delimitatori, termen);
-            if (aparitii.empty()) {
-                continue;
-            }
-            std::cout << "  " << termen << " - " << aparitii.size() << " aparitii\n";
-            std::cout << "    " << construiesteBara(aparitii, total, 40) << "\n";
-
-            std::size_t limita = std::min(aparitii.size(), s.maxPozitii);
-            for (std::size_t i = 0; i < limita; ++i) {
-                const Aparitie& a = aparitii[i];
-                std::cout << "    linia " << a.linie << ", col " << a.coloana
-                          << ", cuvantul " << a.cuvant + 1 << ":  "
-                          << construiesteContext(doc.getContent(), a, s.raza, s.culori) << "\n";
-            }
-            if (aparitii.size() > limita) {
-                std::cout << "    ... +" << aparitii.size() - limita << " altele (:set pozitii <n>)\n";
-            }
+        std::size_t limita = std::min(aparitii.size(), s.maxPozitii);
+        for (std::size_t i = 0; i < limita; ++i) {
+            const Aparitie& a = aparitii[i];
+            std::cout << "    linia " << a.linie << ", col " << a.coloana
+                      << ", cuvantul " << a.cuvant + 1 << ":  "
+                      << construiesteContext(doc->getContent(), a, s.raza, s.culori) << "\n";
         }
-        std::cout << "\n";
+        if (aparitii.size() > limita) {
+            std::cout << "    ... +" << aparitii.size() - limita << " altele (:set pozitii <n>)\n";
+        }
     }
+    std::cout << "\n";
 }
 
 void cautaSiAfiseaza(const InvIndex& idx, const Tokenizer& tok, const std::string& delimitatori,
@@ -320,18 +321,18 @@ void comparaScorere(const InvIndex& idx, const std::vector<std::unique_ptr<Score
             if (std::find(gasite.begin(), gasite.end(), rezultat.first) == gasite.end()) {
                 continue;
             }
-            for (const auto& doc : idx.getDocuments()) {
-                if (doc.getId() == rezultat.first) {
-                    std::cout << "  " << loc << ". " << doc.getTitle() << " (scor " << rezultat.second << ")\n";
-                }
+            const Document* doc = idx.findDocById(rezultat.first);
+            if (doc != nullptr) {
+                std::cout << "  " << loc << ". " << doc->getTitle() << " (scor " << rezultat.second << ")\n";
+                loc++;
             }
-            loc++;
         }
     }
 }
 
 void afiseazaStatistici(const InvIndex& idx) {
     std::cout << idx.getIndexSummary() << "\n";
+    std::cout << "Scoruri calculate pana acum: " << Scorer::getComputedScores() << "\n";
     for (const auto& doc : idx.getDocuments()) {
         std::cout << "doc " << doc.getId() << " [" << doc.getTitle() << "]: "
                   << idx.getDocUniqueTerms(doc.getId()) << " termeni unici, "
@@ -395,8 +396,19 @@ void ruleazaDemo(const InvIndex& idx, const Tokenizer& tok,
     std::cout << altRanker << "\n";
 }
 
+void afiseazaIstoric(const std::vector<std::string>& istoric) {
+    if (istoric.empty()) {
+        std::cout << "Nu ai cautat nimic inca.\n";
+        return;
+    }
+    for (std::size_t i = 0; i < istoric.size(); ++i) {
+        std::cout << i + 1 << ". " << istoric[i] << "\n";
+    }
+}
+
 void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Tokenizer& tok, Setari& s,
-                       const std::vector<std::unique_ptr<Scorer>>& scorere, Ranker& ranker) {
+                       const std::vector<std::unique_ptr<Scorer>>& scorere, Ranker& ranker,
+                       const std::string& delimitatori, const std::vector<std::string>& istoric) {
     std::vector<std::string> arg = imparteCuvinte(linie);
     const std::string& cmd = arg.front();
 
@@ -408,6 +420,14 @@ void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Toke
         std::cout << idx << "\n";
     } else if (cmd == ":demo") {
         ruleazaDemo(idx, tok, scorere, ranker);
+    } else if (cmd == ":history") {
+        afiseazaIstoric(istoric);
+    } else if (cmd == ":again" && arg.size() >= 2) {
+        std::size_t numar = static_cast<std::size_t>(citesteNumar(arg[1]));
+        if (numar == 0 || numar > istoric.size()) {
+            throw CommandError("nu exista cautarea " + arg[1] + " (vezi :history)");
+        }
+        cautaSiAfiseaza(idx, tok, delimitatori, istoric[numar - 1], s, ranker);
     } else if (cmd == ":scorers") {
         afiseazaScorere(scorere);
         std::cout << "Folosit acum: " << ranker << "\n";
@@ -422,6 +442,9 @@ void proceseazaComanda(const std::string& linie, const InvIndex& idx, const Toke
         afiseazaIds(idx, "proximitate", idx.searchProximity(arg[1], arg[2], citesteNumar(arg[3])));
     } else if (cmd == ":set" && arg.size() >= 3 && arg[1] == "scorer") {
         ranker = Ranker(gasesteScorer(scorere, arg[2]));
+        std::cout << "ok: " << ranker << "\n";
+    } else if (cmd == ":set" && arg.size() >= 3 && arg[1] == "limita") {
+        ranker.setFrequencyLimit(citesteNumar(arg[2]));
         std::cout << "ok: " << ranker << "\n";
     } else if (cmd == ":set" && arg.size() >= 3) {
         int valoare = citesteNumar(arg[2]);
@@ -531,6 +554,7 @@ int main(int argc, char* argv[]) {
         std::cout << "\nAm indexat " << idx.getDocCount() << " documente.\n" << idx.getIndexSummary() << "\n";
         afiseazaAjutor();
 
+        std::vector<std::string> istoric;
         std::string linie;
         while (citesteLinie("cauta> ", linie)) {
             if (imparteCuvinte(linie).empty()) {
@@ -541,9 +565,10 @@ int main(int argc, char* argv[]) {
             }
             try {
                 if (linie.front() == ':') {
-                    proceseazaComanda(linie, idx, tok, setari, scorere, ranker);
+                    proceseazaComanda(linie, idx, tok, setari, scorere, ranker, delimitatori, istoric);
                 } else {
                     cautaSiAfiseaza(idx, tok, delimitatori, linie, setari, ranker);
+                    istoric.push_back(linie);
                 }
             } catch (const CommandError& e) {
                 std::cout << e.what() << "\nScrie :help pentru comenzi.\n";

@@ -2,6 +2,7 @@
 // Created by patri on 24.11.2026.
 //
 
+
 #ifndef OOP_SCORER_H
 #define OOP_SCORER_H
 
@@ -23,6 +24,7 @@ struct ScoreContext {
 class Scorer {
 private:
     std::string name;
+    static int computedScores;
 
     virtual double computeScore(const Entry& entry, const ScoreContext& ctx) const = 0;
     virtual void printDetails(std::ostream& os) const = 0;
@@ -37,6 +39,7 @@ public:
 
     double score(const Entry& entry, const ScoreContext& ctx) const;
     bool hasName(const std::string& wanted) const;
+    static int getComputedScores();
     void print(std::ostream& os) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Scorer& scorer);
@@ -66,6 +69,8 @@ public:
 
 class FrequencyScorer : public Scorer {
 private:
+    int limit;
+
     double computeScore(const Entry& entry, const ScoreContext& ctx) const override;
     void printDetails(std::ostream& os) const override;
 
@@ -73,6 +78,7 @@ public:
     FrequencyScorer();
 
     std::unique_ptr<Scorer> clone() const override;
+    void setLimit(int newLimit);
 };
 
 #endif //OOP_SCORER_H
